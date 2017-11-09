@@ -20,7 +20,7 @@ dependencies:
 
 test:
   override:
-    - sbt coverage test
+    - sbt clean coverage test
     - sbt coverageReport
   post:
     - mkdir -p $CIRCLE_ARTIFACTS/scala-2.12
