@@ -10,8 +10,8 @@ object Dependencies {
 
   // Libraries
   val cats           = "org.typelevel" %% "cats-core" % catsVersion
-  val akkaHttp       = "com.typesafe.akka" %% "akka-http" % akkaHttpVersion 
-  val akkaHttpTest   = "com.typesafe.akka" %% "akka-http-testkit" %  akkaHttpVersion 
+  val akkaHttp       = "com.typesafe.akka" %% "akka-http" % akkaHttpVersion
+  val akkaHttpTest   = "com.typesafe.akka" %% "akka-http-testkit" %  akkaHttpVersion
   val scalaCheckTest = "org.scalacheck" %% "scalacheck" % scalaCheckVersion
   val specs2Test     = "org.specs2" %% "specs2-core" % specs2Version
   val specs2ScalaCheckTest = "org.specs2" %% "specs2-scalacheck" % specs2Version

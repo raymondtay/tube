@@ -1,4 +1,4 @@
-# Tube
+# tube
 The pipeline for Slack
 
 
@@ -8,7 +8,7 @@ Developers should not check in any IDE-related files.
 
 ## Code coverage 
 
-Tube uses code coverage via [scoverage](https://github.com/scoverage/sbt-scoverage) because we believe we don't deliver shit to users.
+`tube` uses code coverage via [scoverage](https://github.com/scoverage/sbt-scoverage) because we believe we don't deliver shit to users.
 
 *Note*: code coverage is enabled, by default. To disable it, change the
 property of `coverageEnabled` to `false` in `build.sbt`. If you want to know
@@ -23,7 +23,7 @@ sbt clean coverage test
 
 ## Scala Style
 
-Tube uses the the sbt plugin [Scalastyle](http://www.scalastyle.org/sbt.html) for conformance of style. 
+`tube` uses the the sbt plugin [Scalastyle](http://www.scalastyle.org/sbt.html) for conformance of style. 
 
 ### Usage
 
