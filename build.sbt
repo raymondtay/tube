@@ -5,7 +5,7 @@ val commonSettings = Seq(
   description := "Data pipeline",
   version := "0.1-SNAPSHOT",
   scalaVersion := "2.12.3",
-  scalacOptions += "-Ypartial-unification"
+  scalacOptions ++= Seq("-Yrangepos", "-Ypartial-unification")
 )
 
 val codeCoverageSettings = Seq(
