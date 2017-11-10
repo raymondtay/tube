@@ -6,6 +6,15 @@ The pipeline for Slack
 
 Developers should not check in any IDE-related files.
 
+## Managing Dependencies
+
+`tube` uses [sbt-updates](https://github.com/rtimush/sbt-updates) to stay connected with the latest version of
+libraries needed for this project. The basic command to run to show a listing
+of current libraries in project to latest versions on Maven would be:
+```
+sbt dependencyUpdates
+```
+
 ## Code coverage 
 
 `tube` uses code coverage via [scoverage](https://github.com/scoverage/sbt-scoverage) because we believe we don't deliver shit to users.

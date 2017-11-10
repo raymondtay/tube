@@ -4,7 +4,7 @@ val commonSettings = Seq(
   name := "tube",
   description := "Data pipeline",
   version := "0.1-SNAPSHOT",
-  scalaVersion := "2.12.3",
+  scalaVersion := "2.12.4",
   scalacOptions ++= Seq("-Yrangepos", "-Ypartial-unification")
 )
 
