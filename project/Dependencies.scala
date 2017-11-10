@@ -31,7 +31,7 @@ object Dependencies {
     "io.opentracing" % "opentracing-api" % openTracingVersion ,
     "io.opentracing" % "opentracing-util" % openTracingVersion,
     "com.uber.jaeger" % "jaeger-core" % jaegerCoreVersion)
- 
+
   // Grouping the libraries to logical units
   val generalLibs = Seq(cats, akkaHttp, akkaStream, akkaActors) ++ circeJson ++ openTracing
 
