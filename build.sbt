@@ -21,4 +21,5 @@ lazy val tube = (project in file("."))
     libraryDependencies ++= (generalLibs ++ testLibs)
   )
 
+enablePlugins(JavaServerAppPackaging)
 
