@@ -1,0 +1,3 @@
+[submodule "slacks"]
+	path = slacks
+	url = https://github.com/raymondtay/slacks
