@@ -7,6 +7,7 @@ import org.apache.flink.streaming.api.functions.sink._
 
 object Main {
   import nugit.tube.api.SlackFunctions._
+  import slacks.core.config._
   import providers.slack.models._
   import akka.actor._
   import akka.stream._
@@ -23,7 +24,7 @@ object Main {
     val channelNameA = "more than or equal to 5 members"
     val channelNameB = "less than 5 members"
 
-    val (channels, logs) = getChannelListing(timeout).run(testToken)
+    val (channels, logs) = getChannelListing(Config.channelListConfig)(timeout).run(testToken)
     println(s"Total number of channels: ${channels.size}")
     val channelsEnv = env.fromCollection(channels)
     val splitChannels = channelsEnv.name("channel-split").split(channel ⇒ if (channel.num_members >= 5) channelNameA :: Nil else channelNameB :: Nil)
