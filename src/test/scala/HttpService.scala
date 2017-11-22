@@ -1,7 +1,8 @@
-package slacks.core.program
+package nugit.tube.api
 
 import providers.slack.algebra._
 import providers.slack.models.SlackAccessToken
+import slacks.core.program.HttpService
 import slacks.core.config.SlackAccessConfig
 
 import akka.actor._
