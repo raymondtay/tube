@@ -6,6 +6,12 @@ machine:
   environment:
     SBT_VERSION: 0.13.16
     SBT_OPTS: "-Xms512M -Xmx1536M -Xss1M -XX:+CMSClassUnloadingEnabled -XX:MaxPermSize=256M"
+
+checkout:
+  post:
+    - git submodule sync
+    - git submodule update --init # use submodules
+
 dependencies:
   cache_directories:
     - "~/.sbt"
