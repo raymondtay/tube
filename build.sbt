@@ -1,10 +1,16 @@
 import Dependencies._
 
+// Leverage Maven's repository and not look for the local
+resolvers in ThisBuild ++= Seq(
+    "Apache Development Snapshot Repository" at "https://repository.apache.org/content/repositories/snapshots/"
+)
+
 val commonSettings = Seq(
   name := "tube",
+  organization := "org.nugit",
   description := "Data pipeline",
   version := "0.1-SNAPSHOT",
-  scalaVersion := "2.12.4",
+  scalaVersion := "2.11.11",
   scalacOptions ++= Seq("-Yrangepos", "-Ypartial-unification")
 )
 
@@ -23,3 +29,11 @@ lazy val tube = (project in file(".")).dependsOn(ProjectRef(uri("git://github.co
 
 enablePlugins(JavaServerAppPackaging)
 
+// make run command include the provided dependencies
+run in Compile := Defaults.runTask(fullClasspath in Compile,
+                                   mainClass in (Compile, run),
+                                   runner in (Compile,run)
+                                  ).evaluated
+
+// exclude Scala library from assembly
+assemblyOption in assembly := (assemblyOption in assembly).value.copy(includeScala = false)
