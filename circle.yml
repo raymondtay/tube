@@ -11,6 +11,7 @@ checkout:
   post:
     - git submodule sync --recursive
     - git submodule update --recursive --init # use submodules
+    - echo "ls -l ~/.sbt/1.0/staging/"
 
 dependencies:
   cache_directories:
@@ -26,6 +27,7 @@ dependencies:
 
 test:
   override:
+    - echo "ls -l ~/.sbt/1.0/staging/"
     - sbt clean coverage test
     - sbt coverageReport
   post:
