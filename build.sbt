@@ -21,7 +21,9 @@ val codeCoverageSettings = Seq(
  coverageFailOnMinimum := true
 )
 
-lazy val tube = (project in file(".")).dependsOn(ProjectRef(uri("git://github.com/raymondtay/slacks"), "slacks"))
+val slacks = ProjectRef(uri("git://github.com/raymondtay/slacks.git"), "slacks")
+
+lazy val tube = (project in file(".")).dependsOn(slacks)
   .settings(
     commonSettings ++ codeCoverageSettings,
     libraryDependencies ++= (generalLibs ++ testLibs)
