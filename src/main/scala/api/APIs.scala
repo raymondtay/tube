@@ -1,6 +1,12 @@
 package nugit.tube.api
 
-object SlackFunctions {
+trait Implicits {
+  import slacks.core.program._
+  implicit val httpService = new RealHttpService
+
+}
+
+object SlackFunctions extends Implicits {
   import cats._, data._, implicits._
   import scala.concurrent.duration._
   import akka.actor._
@@ -24,8 +30,9 @@ object SlackFunctions {
     * @param timeout how long to wait before a timeout
     * @param token the slack access token
     */
-  def getChannelListing(timeout : scala.concurrent.duration.Duration)
-                       (implicit actorSystem : ActorSystem, actorMat : ActorMaterializer)
+  def getChannelListing(config: NonEmptyList[ConfigValidation] Either SlackChannelListConfig[String])
+                       (timeout : scala.concurrent.duration.Duration)
+                       (implicit actorSystem : ActorSystem, actorMat : ActorMaterializer, httpService : HttpService)
                        : Reader[SlackAccessToken[String], (List[SlackChannel], List[String])] = Reader { (token: SlackAccessToken[String]) ⇒
     import ChannelsInterpreter._
     import scala.concurrent._, duration._
@@ -33,11 +40,11 @@ object SlackFunctions {
 
     implicit val scheduler = ExecutorServices.schedulerFromGlobalExecutionContext
     import slacks.core.config.Config
-    Config.channelListConfig match {
+    config match {
       case Right(cfg) ⇒
         val (channels, logInfo) =
           Await.result(
-            getChannelList(cfg, new RealHttpService).
+            getChannelList(cfg, httpService).
               runReader(token).
               runWriter.runSequential, timeout)
         (channels.xs, logInfo)
@@ -51,8 +58,9 @@ object SlackFunctions {
     * @param timeout how long to wait before a timeout
     * @param token the slack access token
     */
-  def getChannelHistory(channelId: String, timeout : scala.concurrent.duration.Duration)
-                       (implicit actorSystem : ActorSystem, actorMat : ActorMaterializer)
+  def getChannelHistory(config: NonEmptyList[ConfigValidation] Either SlackChannelReadConfig[String])
+                       (channelId: String, timeout : scala.concurrent.duration.Duration)
+                       (implicit actorSystem : ActorSystem, actorMat : ActorMaterializer, httpService : HttpService)
                        : Reader[SlackAccessToken[String], (List[Message], List[String])] = Reader { (token: SlackAccessToken[String]) ⇒
     import ChannelConversationInterpreter._
     import scala.concurrent._, duration._
@@ -60,11 +68,11 @@ object SlackFunctions {
 
     implicit val scheduler = ExecutorServices.schedulerFromGlobalExecutionContext
     import slacks.core.config.Config
-    Config.channelReadConfig match {
+    config match {
       case Right(cfg) ⇒
         val (channelHistories, logInfo) =
           Await.result(
-            ChannelConversationInterpreter.getChannelHistory(channelId, cfg, new RealHttpService).
+            ChannelConversationInterpreter.getChannelHistory(channelId, cfg, httpService).
               runReader(token).
               runWriter.runSequential, timeout)
         (channelHistories.xs, logInfo)
