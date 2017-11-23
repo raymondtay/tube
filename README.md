@@ -1,6 +1,22 @@
 # tube
 The pipeline for Slack
 
+# QuickStart
+
+This package is deployed against [Apache Flink](http://flink.apache.org) and is
+tested against version `1.3.2` though it is best to run against `1.4` as
+there's source compatibility throughout.
+
+Note: You need to have Apache Flink running in the environment prior 
+
+- Verify that Flink is running (Flink's Web UI is hosted on `http://localhost:8081`)
+- Run `sbt assembly` (this should give you a _fat_ jar file e.g.
+  `tube-assembly-0.1-SNAPSHOT.jar`)
+- Take that _fat_ jar file and run it against the Flink e.g. `bin/flink run
+  tube-assembly-0.1-SNAPSHOT.jar`
+
+Here is what you might get when you successfully ran it:
+![Screen to Tube running against Flink](./images/tube_on_flink.png)
 
 # Developers
 
