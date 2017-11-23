@@ -14,7 +14,6 @@ object Dependencies {
   val scalaLoggerVersion = "3.7.2"
   val logbackClassic     = "1.2.3"
   val flinkVersion       = "1.4-SNAPSHOT"
-  val slacksVersion      = "0.1-SNAPSHOT"
 
   // Libraries
   val cats           = "org.typelevel" %% "cats-core" % catsVersion
@@ -25,7 +24,6 @@ object Dependencies {
   val specs2ScalaCheckTest = "org.specs2" %% "specs2-scalacheck" % specs2Version
   val akkaStream           = "com.typesafe.akka" %% "akka-stream" % akkaVersion
   val akkaActors           = "com.typesafe.akka" %% "akka-actor"  % akkaVersion
-  val slacks               = "org.slacks" %% "slacks" % slacksVersion
 
   val circeJson            =  Seq(
     "io.circe" %% "circe-core",
@@ -48,7 +46,7 @@ object Dependencies {
     "org.apache.flink" %% "flink-streaming-scala" %     flinkVersion % "provided")
 
   // Grouping the libraries to logical units
-  val generalLibs = Seq(cats, akkaHttp, akkaStream, akkaActors, slacks) ++ logger ++ circeJson ++ openTracing ++ flinkLibs
+  val generalLibs = Seq(cats, akkaHttp, akkaStream, akkaActors) ++ logger ++ circeJson ++ openTracing ++ flinkLibs
 
   val testLibs = Seq(akkaHttpTest, specs2ScalaCheckTest, specs2Test).map( _ % Test )
 
