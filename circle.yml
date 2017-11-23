@@ -26,10 +26,11 @@ dependencies:
 
 test:
   override:
+    - rm -fR ~/.sbt/1.0/staging/ # this is necessary to clear out outdated repos s.t. sbt can load fresh ones
     - sbt clean test
     - sbt coverageReport
   post:
-    - mkdir -p $CIRCLE_ARTIFACTS/scala-2.12
-    - mv target/scala-2.12/coverage-report  $CIRCLE_ARTIFACTS/scala-2.12/coverage-report
-    - mv target/scala-2.12/scoverage-report $CIRCLE_ARTIFACTS/scala-2.12/scoverage-report
+    - mkdir -p $CIRCLE_ARTIFACTS/scala-2.11
+    - mv target/scala-2.11/coverage-report  $CIRCLE_ARTIFACTS/scala-2.11/coverage-report
+    - mv target/scala-2.11/scoverage-report $CIRCLE_ARTIFACTS/scala-2.11/scoverage-report
 
