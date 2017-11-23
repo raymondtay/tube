@@ -11,7 +11,6 @@ checkout:
   post:
     - git submodule sync --recursive
     - git submodule update --recursive --init # use submodules
-    - echo "[debugging] ls -lR ~/.sbt/1.0/staging/"
 
 dependencies:
   cache_directories:
@@ -27,9 +26,7 @@ dependencies:
 
 test:
   override:
-    - echo "[debugging] ls -lR ~/.sbt/1.0/staging/"
     - sbt clean test
-    - echo "[debugging] ls -lR ~/.sbt/1.0/staging/"
     - sbt coverageReport
   post:
     - mkdir -p $CIRCLE_ARTIFACTS/scala-2.12

@@ -33,13 +33,14 @@ class FakeChannelListingErrorHttpService extends HttpService {
   import cats.data.Kleisli, cats.implicits._
   import ContentTypes._
   import providers.slack.models.{SlackError,JsonCodec}
-  import io.circe.syntax._
-  import JsonCodec._
   import scala.concurrent.Future
-  import io.circe._, io.circe.generic.semiauto._
 
   override def makeSingleRequest(implicit http: HttpExt, akkaMat: ActorMaterializer) : Kleisli[Future,String,HttpResponse] = Kleisli{
     (_uri: String) ⇒
+      import io.circe.syntax._
+      import io.circe._, io.circe.generic.semiauto._
+      implicit val errorEnc : Encoder[SlackError] = deriveEncoder[SlackError]
+ 
       val jsonData = SlackError(false, "invalid_auth").asJson.toString
       Future.successful(
         HttpResponse(entity = HttpEntity(`application/json`, jsonData))
@@ -51,13 +52,13 @@ class FakeChannelHistoryErrorHttpService extends HttpService {
   import cats.data.Kleisli, cats.implicits._
   import ContentTypes._
   import providers.slack.models.{SlackError,JsonCodec}
-  import io.circe.syntax._
-  import JsonCodec._
   import scala.concurrent.Future
-  import io.circe._, io.circe.generic.semiauto._
 
   override def makeSingleRequest(implicit http: HttpExt, akkaMat: ActorMaterializer) : Kleisli[Future,String,HttpResponse] = Kleisli{
     (_uri: String) ⇒
+      import io.circe.syntax._
+      import io.circe._, io.circe.generic.semiauto._
+      implicit val errorEnc : Encoder[SlackError] = deriveEncoder[SlackError]
       val jsonData = SlackError(false, "invalid_auth").asJson.toString
       Future.successful(
         HttpResponse(entity = HttpEntity(`application/json`, jsonData))
