@@ -26,6 +26,7 @@ object Main {
 
     val (channels, logs) = getChannelListing(Config.channelListConfig)(timeout).run(testToken)
     println(s"Total number of channels: ${channels.size}")
+    channels.map(c => println(c.id+","+c.name))
     val channelsEnv = env.fromCollection(channels)
     val splitChannels = channelsEnv.name("channel-split").split(channel ⇒ if (channel.num_members >= 5) channelNameA :: Nil else channelNameB :: Nil)
 
