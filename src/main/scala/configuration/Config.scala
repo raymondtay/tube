@@ -1,4 +1,4 @@
-package tube.configuration
+package nugit.tube.configuration
 
 import scala.util.Try
 import com.typesafe.config._
@@ -12,11 +12,22 @@ import shapeless._
 
 object Config {
   lazy val config = ConfigFactory.load()
-  //val tubeConfig : NonEmptyList[ConfigValidation] Either SlackUsersListConfig[String] = ConfigValidator.validateUsersListConfig(config.getConfig("slacks.api.users.list")).toEither
 }
 
 sealed trait ConfigValidation {
   def errorMessage : String
+}
+
+case object MissingFailureRateObject extends ConfigValidation {
+  def errorMessage : String = "There was no valid object marked by key 'failure-rate' found in 'tube.conf'."
+}
+
+case object MissingFixedDelayObject extends ConfigValidation {
+  def errorMessage : String = "There was no valid object marked by key 'fixed-delay' found in 'tube.conf'."
+}
+
+case object MissingNoneObject extends ConfigValidation {
+  def errorMessage : String = "There was no valid object marked by key 'none' found in 'tube.conf'."
 }
 
 case object MissingFailureRateIntervalKey extends ConfigValidation {
@@ -53,6 +64,7 @@ sealed trait RestartStrategy
 case class NONE(attempts: Long, delay: Long) extends RestartStrategy
 case class FixedDelay(attempts: Long, delay: Long) extends RestartStrategy
 case class FailureRate(max_failures_per_interval: Long, failure_rate_interval: Long, delay: Long) extends RestartStrategy
+case class TubeRestartConfig(noneCfg: NONE, fdCfg: FixedDelay, frCfg: FailureRate)
 
 // All time values will be resolved to milliseconds as represented by the `TubeTime`
 trait TimeUnitParser {
@@ -162,6 +174,25 @@ sealed trait ConfigValidator extends TimeUnitParser {
       }
   }
 
+  def isNonePresent(c: Config) : ValidationResult[ConfigObject] = {
+    Try{c.getObject("restart-strategy.none")}.toOption match {
+      case Some(noneObj) ⇒ noneObj.validNel
+      case None ⇒ MissingNoneObject.invalidNel
+    }
+  }
+  def isFixedDelayPresent(c: Config) : ValidationResult[ConfigObject] = {
+    Try{c.getObject("restart-strategy.fixed-delay")}.toOption match {
+      case Some(fdObj) ⇒ fdObj.validNel
+      case None ⇒ MissingFixedDelayObject.invalidNel
+    }
+  }
+  def isFailureRatePresent(c: Config) : ValidationResult[ConfigObject] = {
+    Try{c.getObject("restart-strategy.failure-rate")}.toOption match {
+      case Some(frObj) ⇒ frObj.validNel
+      case None ⇒ MissingFailureRateObject.invalidNel
+    }
+  }
+
 }
 
 object ConfigValidator extends ConfigValidator {
@@ -178,16 +209,13 @@ object ConfigValidator extends ConfigValidator {
   }
 
   // Loads the default configuration from `tube.conf`.
-  def loadDefaults(config: Config) : Either[NonEmptyList[ConfigValidation], (NONE, FixedDelay, FailureRate)]= {
-    import collection.JavaConverters._
-
-    (config.getObject(s"restart-strategy.none").validNel,
-     config.getObject(s"restart-strategy.fixed-delay").validNel,
-     config.getObject(s"restart-strategy.failure-rate").validNel).map3 {
+  def loadDefaults(config: Config) : Either[NonEmptyList[ConfigValidation], ValidatedNel[ConfigValidation,TubeRestartConfig]] = {
+    (isNonePresent(config),
+     isFixedDelayPresent(config),
+     isFailureRatePresent(config)).map3{
        (a, b, c) ⇒
-         (loadNoneStrategy(a.toConfig), loadFixedDelayStrategy(b.toConfig), loadFailureRateStrategy(c.toConfig)) match {
-           case (Valid(_a), Valid(_b), Valid(_c)) ⇒ (_a, _b, _c)
-           case _ ⇒ (NONE(0L,0L), FixedDelay(0L, 0L), FailureRate(0L,0L,0L))
+         (loadNoneStrategy(a.toConfig), loadFixedDelayStrategy(b.toConfig), loadFailureRateStrategy(c.toConfig)).map3{
+           (_a, _b, _c) ⇒ TubeRestartConfig(_a, _b, _c)
          }
      }.toEither
   }
