@@ -20,31 +20,31 @@ sealed trait ConfigValidation {
 }
 
 case object MissingFailureRateIntervalKey extends ConfigValidation {
-  def errorMessage = "There was no key 'failure_rate_interval' found in 'tube.conf'."
+  def errorMessage : String = "There was no key 'failure_rate_interval' found in 'tube.conf'."
 }
 
 case object MissingDelayKey extends ConfigValidation {
-  def errorMessage = "There was no key 'delay' found in 'tube.conf'."
+  def errorMessage : String = "There was no key 'delay' found in 'tube.conf'."
 }
 
 case object MissingAttemptsKey extends ConfigValidation {
-  def errorMessage = "There was no key 'attempts' found in 'tube.conf'."
+  def errorMessage : String = "There was no key 'attempts' found in 'tube.conf'."
 }
 
 case object MissingMaxFailuresPerIntervalKey extends ConfigValidation {
-  def errorMessage = "There was no key 'max_failures_per_interval' found in 'tube.conf'."
+  def errorMessage : String = "There was no key 'max_failures_per_interval' found in 'tube.conf'."
 }
 
 case object MissingParentStrategyOptions extends ConfigValidation {
-  def errorMessage = "There was no strategy option(s) found in 'tube.conf'."
+  def errorMessage : String = "There was no strategy option(s) found in 'tube.conf'."
 }
 
 case object MissingStrategyOption extends ConfigValidation {
-  def errorMessage = "There was no strategy option for restarting this job."
+  def errorMessage : String = "There was no strategy option for restarting this job."
 }
 
 case object MissingTimeUnit extends ConfigValidation {
-  def errorMessage = "Either 's' or 'sec' for seconds; 'm' or 'min' for minutes"
+  def errorMessage : String = "Either 's' or 'sec' for seconds; 'm' or 'min' for minutes"
 }
 
 // The time according to `Tube` and hence the name
@@ -68,7 +68,7 @@ trait TimeUnitParser {
   // would assume its a numeric value and simply returns that.
   val timeUnitParser = Reader{ (timeString: String) ⇒
     P( number.! ~ spaces.? ~ timeUnitIdentifiers.?.! ).parse(timeString) match {
-      case Parsed.Success(datum, _) ⇒ 
+      case Parsed.Success(datum, _) ⇒
         datum._2 match {
           case "min" | "m" ⇒ datum._1.toInt * 60 * 1000
           case "sec" | "s" ⇒ datum._1.toInt * 1000
