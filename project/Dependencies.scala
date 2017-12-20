@@ -16,6 +16,7 @@ object Dependencies {
   val fastparseVersion   = "1.0.0"
   val flinkVersion       = "1.4-SNAPSHOT"
   val shapelessVersion   = "2.3.2"
+  val scoptVersion       = "3.7.0"
 
   // Libraries
   val cats           = "org.typelevel" %% "cats-core" % catsVersion
@@ -28,6 +29,7 @@ object Dependencies {
   val akkaActors           = "com.typesafe.akka" %% "akka-actor"  % akkaVersion
   val fastparse            = "com.lihaoyi" %% "fastparse" % fastparseVersion
   val shapeless            = "com.chuusai" %% "shapeless" % shapelessVersion
+  val scopt                = "com.github.scopt" %% "scopt" % scoptVersion
 
   val circeJson            =  Seq(
     "io.circe" %% "circe-core",
@@ -50,7 +52,7 @@ object Dependencies {
     "org.apache.flink" %% "flink-streaming-scala" %     flinkVersion % "provided")
 
   // Grouping the libraries to logical units
-  val generalLibs = Seq(cats, akkaHttp, akkaStream, akkaActors, shapeless, fastparse) ++ logger ++ circeJson ++ openTracing ++ flinkLibs
+  val generalLibs = Seq(cats, akkaHttp, akkaStream, akkaActors, shapeless, fastparse, scopt) ++ logger ++ circeJson ++ openTracing ++ flinkLibs
 
   val testLibs = Seq(akkaHttpTest, specs2ScalaCheckTest, specs2Test).map( _ % Test )
 
