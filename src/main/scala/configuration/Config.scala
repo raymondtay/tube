@@ -209,16 +209,13 @@ object ConfigValidator extends ConfigValidator {
   }
 
   // Loads the default configuration from `tube.conf`.
-  def loadDefaults(config: Config) : Either[NonEmptyList[ConfigValidation], ValidatedNel[ConfigValidation,TubeRestartConfig]] = {
-    (isNonePresent(config),
-     isFixedDelayPresent(config),
-     isFailureRatePresent(config)).map3{
-       (a, b, c) ⇒
-         (loadNoneStrategy(a.toConfig), loadFixedDelayStrategy(b.toConfig), loadFailureRateStrategy(c.toConfig)).map3{
-           (_a, _b, _c) ⇒ TubeRestartConfig(_a, _b, _c)
-         }
+  def loadDefaults(config: Config) : Either[NonEmptyList[ConfigValidation], TubeRestartConfig] =
+    (isNonePresent(config) |@| isFixedDelayPresent(config) |@| isFailureRatePresent(config)).map{
+      (a,b,c) ⇒ 
+         (loadNoneStrategy(a.toConfig) |@| loadFixedDelayStrategy(b.toConfig) |@| loadFailureRateStrategy(c.toConfig)).map{
+           (_a,_b,_c) ⇒ TubeRestartConfig(_a, _b, _c)
      }.toEither
-  }
-
+   }.toEither.joinRight
+  
 }
 
