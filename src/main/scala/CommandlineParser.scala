@@ -1,4 +1,4 @@
-package nugit.tube
+package nugit.tube.cli
 
 /**
   * Represents the commandline options we want to support in Tube
@@ -11,8 +11,10 @@ case class TubeConfig(
 
 object CommandlineParser {
   import scopt._
-  implicit val zeroTubeConfig = Zero.zero(TubeConfig())
-  val parser = new scopt.OptionParser[TubeConfig]("tube") {
+  import cats._, data._, implicits._
+
+  private implicit val zeroTubeConfig = Zero.zero(TubeConfig())
+  private val parser = new scopt.OptionParser[TubeConfig]("tube") {
     head("tube", "version : 0.1-SNAPSHOT")
 
     opt[String]('S', "restart-strategy").
@@ -23,4 +25,7 @@ object CommandlineParser {
       text("restart-strategy is required.")
   }
 
+  def parseCommandlineArgs : Kleisli[Option, Seq[String], TubeConfig] = Kleisli{ (args: Seq[String]) ⇒
+    parser.parse(args, TubeConfig())
+  }
 }

@@ -15,31 +15,38 @@ object Main {
   import providers.slack.models._
   import akka.actor._
   import akka.stream._
-  import CommandlineParser._
+  import nugit.tube.cli._
+  import nugit.tube.cli.CommandlineParser._
 
   def main(args: Array[String]) {
     // Parse the command line options
-    val cfg : Option[TubeConfig] = parser.parse(args.toSeq, TubeConfig())
+    val cliConfig : Option[TubeConfig] = parseCommandlineArgs(args.toSeq)
 
-    if (!cfg.isDefined) System.exit(-1)
-
+    // Load the default configuration
     val tubeRestartCfg : Option[nugit.tube.configuration.TubeRestartConfig] =
       nugit.tube.configuration.ConfigValidator.loadDefaults(nugit.tube.configuration.Config.config) match {
         case Left(errors) ⇒ none
         case Right(theConfig) ⇒ theConfig.some
       }
 
-    if (!tubeRestartCfg.isDefined) System.exit(-1)
+    val loadedConfiguration : Option[(TubeConfig, nugit.tube.configuration.TubeRestartConfig)] = 
+      (cliConfig |@| tubeRestartCfg).map((lhs, rhs) ⇒ (lhs, rhs))
+
+    // If either of the loaded configuration fails, this application
+    // terminates.
+    if (!loadedConfiguration.isDefined) System.exit(-1)
+
+    val (commandlineCfg, defaultCfg) = loadedConfiguration.get
 
     val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
 
-    cfg.get match {
+    commandlineCfg match {
       case TubeConfig("none")        ⇒ env.setRestartStrategy(RestartStrategies.noRestart())
       case TubeConfig("fixed-delay") ⇒
-        val _c = tubeRestartCfg.get.fdCfg
+        val _c = defaultCfg.fdCfg
         env.setRestartStrategy(RestartStrategies.fixedDelayRestart(_c.attempts.toInt, Time.milliseconds(_c.delay)))
       case TubeConfig("failure-rate") ⇒
-        val _c = tubeRestartCfg.get.frCfg
+        val _c = defaultCfg.frCfg
         env.setRestartStrategy(RestartStrategies.failureRateRestart(_c.max_failures_per_interval.toInt, Time.milliseconds(_c.failure_rate_interval), Time.milliseconds(_c.delay)))
     }
 
