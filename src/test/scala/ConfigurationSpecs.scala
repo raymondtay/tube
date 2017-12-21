@@ -102,11 +102,7 @@ class ConfigurationSpecs extends mutable.Specification with ScalaCheck { overrid
     prop { (config : Config) ⇒
       ConfigValidator.loadDefaults(config) match {
         case Left(errors) ⇒ true // this is expected
-        case Right(obj) ⇒ obj match {
-          case Invalid(errors2) => true // this is expected
-          case Valid(theConfig) => // unexpected!
-            false
-        }
+        case Right(theConfig) ⇒ false // this is not expected!
       }
     }
   }

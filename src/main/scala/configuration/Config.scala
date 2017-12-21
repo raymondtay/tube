@@ -58,8 +58,11 @@ case object MissingTimeUnit extends ConfigValidation {
   def errorMessage : String = "Either 's' or 'sec' for seconds; 'm' or 'min' for minutes"
 }
 
-// The time according to `Tube` and hence the name
-
+// 
+// The `RestartStrategy` represents the configuration derived from the
+// configuration files and the developer can override these options by
+// providing counter arguments over the command line.
+//
 sealed trait RestartStrategy
 case class NONE(attempts: Long, delay: Long) extends RestartStrategy
 case class FixedDelay(attempts: Long, delay: Long) extends RestartStrategy
@@ -209,16 +212,13 @@ object ConfigValidator extends ConfigValidator {
   }
 
   // Loads the default configuration from `tube.conf`.
-  def loadDefaults(config: Config) : Either[NonEmptyList[ConfigValidation], ValidatedNel[ConfigValidation,TubeRestartConfig]] = {
-    (isNonePresent(config),
-     isFixedDelayPresent(config),
-     isFailureRatePresent(config)).map3{
-       (a, b, c) ⇒
-         (loadNoneStrategy(a.toConfig), loadFixedDelayStrategy(b.toConfig), loadFailureRateStrategy(c.toConfig)).map3{
-           (_a, _b, _c) ⇒ TubeRestartConfig(_a, _b, _c)
-         }
+  def loadDefaults(config: Config) : Either[NonEmptyList[ConfigValidation], TubeRestartConfig] =
+    (isNonePresent(config) |@| isFixedDelayPresent(config) |@| isFailureRatePresent(config)).map{
+      (a,b,c) ⇒ 
+         (loadNoneStrategy(a.toConfig) |@| loadFixedDelayStrategy(b.toConfig) |@| loadFailureRateStrategy(c.toConfig)).map{
+           (_a,_b,_c) ⇒ TubeRestartConfig(_a, _b, _c)
      }.toEither
-  }
+   }.toEither.joinRight
 
 }
 
