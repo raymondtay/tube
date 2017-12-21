@@ -18,10 +18,13 @@ object Main {
   import nugit.tube.cli._
   import nugit.tube.cli.CommandlineParser._
 
-  def main(args: Array[String]) {
+  /*
+   * Utility function that, hopefully, reduces the clutter in the Main function
+   * @param args command line arguments
+   */
+  def canThisJobBeLaunched = Reader{ (args: Array[String]) ⇒
     // Parse the command line options
     val cliConfig : Option[TubeConfig] = parseCommandlineArgs(args.toSeq)
-
     // Load the default configuration
     val tubeRestartCfg : Option[nugit.tube.configuration.TubeRestartConfig] =
       nugit.tube.configuration.ConfigValidator.loadDefaults(nugit.tube.configuration.Config.config) match {
@@ -32,15 +35,19 @@ object Main {
     val loadedConfiguration : Option[(TubeConfig, nugit.tube.configuration.TubeRestartConfig)] = 
       (cliConfig |@| tubeRestartCfg).map((lhs, rhs) ⇒ (lhs, rhs))
 
-    // If either of the loaded configuration fails, this application
-    // terminates.
-    if (!loadedConfiguration.isDefined) System.exit(-1)
+    loadedConfiguration
+  }
 
-    val (commandlineCfg, defaultCfg) = loadedConfiguration.get
-
-    val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
-
-    commandlineCfg match {
+  /**
+    * Utility function to configure the restart strategies for this particular
+    * job
+    * @param env
+    * @param defaultCfg configuration loaded from files
+    * @param cfg Configuration loaded from the command line
+    */
+  def setupRestartOption(env : StreamExecutionEnvironment)
+                        (defaultCfg: nugit.tube.configuration.TubeRestartConfig) = Reader{ (cfg: TubeConfig) ⇒
+    cfg match {
       case TubeConfig("none")        ⇒ env.setRestartStrategy(RestartStrategies.noRestart())
       case TubeConfig("fixed-delay") ⇒
         val _c = defaultCfg.fdCfg
@@ -49,6 +56,19 @@ object Main {
         val _c = defaultCfg.frCfg
         env.setRestartStrategy(RestartStrategies.failureRateRestart(_c.max_failures_per_interval.toInt, Time.milliseconds(_c.failure_rate_interval), Time.milliseconds(_c.delay)))
     }
+
+  }
+  def main(args: Array[String]) {
+
+    // If either of the loaded configuration fails, this application terminates.
+    val loadedConfiguration = canThisJobBeLaunched(args)
+
+    if (!loadedConfiguration.isDefined) System.exit(-1)
+
+    val (commandlineCfg, defaultCfg) = loadedConfiguration.get
+
+    val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
+    setupRestartOption(env)(defaultCfg)(commandlineCfg)
 
     val coreCount = 4
     env.setParallelism(coreCount)
