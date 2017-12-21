@@ -217,8 +217,8 @@ object ConfigValidator extends ConfigValidator {
       (a,b,c) ⇒ 
          (loadNoneStrategy(a.toConfig) |@| loadFixedDelayStrategy(b.toConfig) |@| loadFailureRateStrategy(c.toConfig)).map{
            (_a,_b,_c) ⇒ TubeRestartConfig(_a, _b, _c)
-     }.toEither
+    }.toEither
    }.toEither.joinRight
-
+  
 }
 
