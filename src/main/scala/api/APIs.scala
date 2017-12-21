@@ -25,6 +25,32 @@ object SlackFunctions extends Implicits {
   val testToken = SlackAccessToken("xoxp-2169191837-242649061349-267955267123-5e965193f448a1ccbb3bbf6f97083f78", "channel:list" :: Nil)
   val timeout : Duration = 9 seconds
 
+  /** 
+    * API to retrieve all the users from Slack 
+    * with the given access token
+    * @param config configuration we are going to use
+    * @param timeout how long to wait before timeout
+    */
+  def retrieveAllUsers(config: NonEmptyList[ConfigValidation] Either SlackUsersListConfig[String],
+                       timeout : scala.concurrent.duration.Duration)
+                       (implicit actorSystem : ActorSystem, actorMat : ActorMaterializer, httpService : HttpService) : Reader[SlackAccessToken[String], (List[User], List[String])] = Reader { (accessToken: SlackAccessToken[String]) ⇒
+    import UsersInterpreter._
+    import scala.concurrent._, duration._
+    import scala.concurrent.ExecutionContext.Implicits.global
+
+    implicit val scheduler = ExecutorServices.schedulerFromGlobalExecutionContext
+    import slacks.core.config.Config._
+    usersListConfig match { // this tests the configuration loaded in application.conf
+      case Right(cfg) ⇒
+        val (retrievedUsers, logInfo) =
+          Await.result(
+            getAllUsers(cfg, httpService).
+              runReader(accessToken).runWriter.runSequential, 9 second)
+        (retrievedUsers.users, logInfo)
+      case Left(validationErrors)  ⇒ (Nil, validationErrors.toList.map(_.errorMessage))
+    }
+  }
+
   /**
     * API to retrieve all the channels from Slack
     * @param timeout how long to wait before a timeout
