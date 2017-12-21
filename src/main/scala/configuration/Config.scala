@@ -58,6 +58,19 @@ case object MissingTimeUnit extends ConfigValidation {
   def errorMessage : String = "Either 's' or 'sec' for seconds; 'm' or 'min' for minutes"
 }
 
+case class MissingCerebrokey(keyname: String) extends ConfigValidation {
+  def errorMessage : String = s"Missing keyname: $keyname in configuration file."
+}
+
+// Cerebro's Configuration
+case class CerebroConfig(
+  method: String,
+  hostname : String,
+  port : Int,
+  uri: String,
+  url : String
+)
+
 // 
 // The `RestartStrategy` represents the configuration derived from the
 // configuration files and the developer can override these options by
@@ -102,6 +115,36 @@ sealed trait ConfigValidator extends TimeUnitParser {
   val FailureRateGen = LabelledGeneric[FailureRate]
 
   type ValidationResult[A] = ValidatedNel[ConfigValidation, A]
+
+  def validateUrlHttpMethod(c: Config) : ValidationResult[String] =
+    Try{c.getString("tube.cerebro.seed.url.method")}.toOption match {
+      case Some(cerebroSeedUrlMethod) ⇒ cerebroSeedUrlMethod.validNel
+      case None ⇒ MissingCerebrokey("tube.cerebro.seed.url.method").invalidNel
+    }
+
+  def validateHost(c: Config) : ValidationResult[String] =
+    Try{c.getString("tube.cerebro.seed.host")}.toOption match {
+      case Some(cerebroSeedHost) ⇒ cerebroSeedHost.validNel
+      case None ⇒ MissingCerebrokey("tube.cerebro.seed.host").invalidNel
+    }
+
+  def validatePort(c: Config) : ValidationResult[Int] =
+    Try{c.getInt("tube.cerebro.seed.port")}.toOption match {
+      case Some(cerebroSeedPort) ⇒ cerebroSeedPort.validNel
+      case None ⇒ MissingCerebrokey("tube.cerebro.seed.port").invalidNel
+    }
+
+  def validateUri(c: Config) : ValidationResult[String] =
+    Try{c.getString("tube.cerebro.seed.uri")}.toOption match {
+      case Some(cerebroSeedUri) ⇒ cerebroSeedUri.validNel
+      case None ⇒ MissingCerebrokey("tube.cerebro.seed.uri").invalidNel
+    }
+
+  def validateUrl(c: Config) : ValidationResult[String] =
+    Try{c.getString("tube.cerebro.seed.url.s")}.toOption match {
+      case Some(cerebroSeedUrl) ⇒ cerebroSeedUrl.validNel
+      case None ⇒ MissingCerebrokey("tube.cerebro.seed.url.s").invalidNel
+    }
 
   def getSupportedStrategies(c : Config) : ValidationResult[Set[String]] = {
     val keys = c.getObject("restart-strategy").keySet.asScala.toSet
@@ -214,11 +257,19 @@ object ConfigValidator extends ConfigValidator {
   // Loads the default configuration from `tube.conf`.
   def loadDefaults(config: Config) : Either[NonEmptyList[ConfigValidation], TubeRestartConfig] =
     (isNonePresent(config) |@| isFixedDelayPresent(config) |@| isFailureRatePresent(config)).map{
-      (a,b,c) ⇒ 
+      (a,b,c) ⇒
          (loadNoneStrategy(a.toConfig) |@| loadFixedDelayStrategy(b.toConfig) |@| loadFailureRateStrategy(c.toConfig)).map{
            (_a,_b,_c) ⇒ TubeRestartConfig(_a, _b, _c)
     }.toEither
    }.toEither.joinRight
-  
+
+  // Loads Cerebro's configuration
+  def loadCerebroConfig(config: Config) =
+    (validateUrlHttpMethod(config),
+     validateHost(config),
+     validatePort(config),
+     validateUri(config),
+     validateUrl(config)).map5((m,h,p,uri,url) ⇒ CerebroConfig(m,h,p,uri,url))
+
 }
 

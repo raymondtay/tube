@@ -6,9 +6,10 @@ import org.apache.flink.streaming.api.scala._
 import org.apache.flink.streaming.api.functions.sink._
 import org.apache.flink.api.common.time.Time
 import org.apache.flink.api.common.restartstrategy._
+import nugit.tube.api.channels._
+import nugit.tube.api.users._
 
-
-object Main {
+object Main extends ChannelAlgos with UsersAlgos {
   import nugit.tube.api.SlackFunctions._
   import cats.data.Validated._
   import slacks.core.config._
@@ -56,8 +57,12 @@ object Main {
         val _c = defaultCfg.frCfg
         env.setRestartStrategy(RestartStrategies.failureRateRestart(_c.max_failures_per_interval.toInt, Time.milliseconds(_c.failure_rate_interval), Time.milliseconds(_c.delay)))
     }
-
   }
+
+  /**
+    * Main entry
+    * @param args command line arguments
+    */
   def main(args: Array[String]) {
 
     // If either of the loaded configuration fails, this application terminates.
@@ -76,28 +81,9 @@ object Main {
     implicit val actorSystem = ActorSystem("ChannelListingActorSystem")
     implicit val actorMaterializer = ActorMaterializer()
 
-    val channelNameA = "more than or equal to 5 members"
-    val channelNameB = "less than 5 members"
-
-    val (channels, logs) = getChannelListing(Config.channelListConfig)(timeout).run(testToken)
-    println(s"Total number of channels: ${channels.size}")
-    channels.map(c => println(c.id+","+c.name))
-    val channelsEnv = env.fromCollection(channels)
-    val splitChannels = channelsEnv.name("channel-split").split(channel ⇒ if (channel.num_members >= 5) channelNameA :: Nil else channelNameB :: Nil)
-
-    splitChannels.select(channelNameA).addSink(new PrintSinkFunction[SlackChannel] {
-      override def invoke(record: SlackChannel) {
-        println(s"[GTEQ-5] ${record.num_members}")
-      }
-    }).name(channelNameA + " stream")
-
-    splitChannels.select(channelNameB).addSink(new PrintSinkFunction[SlackChannel] {
-      override def invoke(record: SlackChannel) {
-        println(s"[LT-5] ${record.num_members}")
-      }
-    }).name(channelNameB + " stream")
-
-    env.execute
+    // Actually call to Slack via slacks
+    // displayChannel(env).run(testToken)
+    retrieveUsers(Config.usersListConfig, env).run(testToken)
 
     val sleepTime = 5000
     Thread.sleep(sleepTime)
