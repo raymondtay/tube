@@ -27,6 +27,7 @@ dependencies:
 test:
   override:
     - rm -fR ~/.sbt/1.0/staging/ # this is necessary to clear out outdated repos s.t. sbt can load fresh ones
+    - git submodule update --init
     - sbt clean test
     - sbt coverageReport
   post:
