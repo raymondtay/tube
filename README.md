@@ -1,5 +1,5 @@
 # tube
-The pipeline for Slack
+The pipeline for Slack [![CircleCI](https://circleci.com/gh/nugit/tube/tree/master.svg?style=svg)](https://circleci.com/gh/nugit/tube/tree/master)
 
 # QuickStart
 

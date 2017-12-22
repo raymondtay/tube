@@ -8,6 +8,8 @@ machine:
     SBT_OPTS: "-Xms512M -Xmx1536M -Xss1M -XX:+CMSClassUnloadingEnabled -XX:MaxPermSize=256M"
 
 checkout:
+  pre:
+    - rm -fR ~/.sbt/1.0/staging/ # this is necessary to clear out outdated repos s.t. sbt can load fresh ones
   post:
     - git submodule sync --recursive
     - git submodule update --recursive --init # use submodules
@@ -26,8 +28,6 @@ dependencies:
 
 test:
   override:
-    - rm -fR ~/.sbt/1.0/staging/ # this is necessary to clear out outdated repos s.t. sbt can load fresh ones
-    - git submodule update --init
     - sbt clean test
     - sbt coverageReport
   post:
