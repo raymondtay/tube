@@ -49,11 +49,11 @@ object Main extends ChannelAlgos with UsersAlgos {
   def setupRestartOption(env : StreamExecutionEnvironment)
                         (defaultCfg: nugit.tube.configuration.TubeRestartConfig) = Reader{ (cfg: TubeConfig) ⇒
     cfg match {
-      case TubeConfig("none")        ⇒ env.setRestartStrategy(RestartStrategies.noRestart())
-      case TubeConfig("fixed-delay") ⇒
+      case TubeConfig("none", _)        ⇒ env.setRestartStrategy(RestartStrategies.noRestart())
+      case TubeConfig("fixed-delay", _) ⇒
         val _c = defaultCfg.fdCfg
         env.setRestartStrategy(RestartStrategies.fixedDelayRestart(_c.attempts.toInt, Time.milliseconds(_c.delay)))
-      case TubeConfig("failure-rate") ⇒
+      case TubeConfig("failure-rate", _) ⇒
         val _c = defaultCfg.frCfg
         env.setRestartStrategy(RestartStrategies.failureRateRestart(_c.max_failures_per_interval.toInt, Time.milliseconds(_c.failure_rate_interval), Time.milliseconds(_c.delay)))
     }
@@ -75,8 +75,7 @@ object Main extends ChannelAlgos with UsersAlgos {
     val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
     setupRestartOption(env)(defaultCfg)(commandlineCfg)
 
-    val coreCount = 4
-    env.setParallelism(coreCount)
+    env.setParallelism(commandlineCfg.parallelism)
 
     implicit val actorSystem = ActorSystem("ChannelListingActorSystem")
     implicit val actorMaterializer = ActorMaterializer()
