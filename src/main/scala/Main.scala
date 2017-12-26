@@ -23,7 +23,7 @@ object Main extends ChannelAlgos with UsersAlgos {
    * Utility function that, hopefully, reduces the clutter in the Main function
    * @param args command line arguments
    */
-  def canThisJobBeLaunched = Reader{ (args: Array[String]) ⇒
+  def canThisJobBeLaunched : Reader[Array[String], Option[(TubeConfig, nugit.tube.configuration.TubeRestartConfig)]] = Reader{ (args: Array[String]) ⇒
     // Parse the command line options
     val cliConfig : Option[TubeConfig] = parseCommandlineArgs(args.toSeq)
     // Load the default configuration
@@ -33,7 +33,7 @@ object Main extends ChannelAlgos with UsersAlgos {
         case Right(theConfig) ⇒ theConfig.some
       }
 
-    val loadedConfiguration : Option[(TubeConfig, nugit.tube.configuration.TubeRestartConfig)] = 
+    val loadedConfiguration : Option[(TubeConfig, nugit.tube.configuration.TubeRestartConfig)] =
       (cliConfig |@| tubeRestartCfg).map((lhs, rhs) ⇒ (lhs, rhs))
 
     loadedConfiguration
@@ -47,7 +47,7 @@ object Main extends ChannelAlgos with UsersAlgos {
     * @param cfg Configuration loaded from the command line
     */
   def setupRestartOption(env : StreamExecutionEnvironment)
-                        (defaultCfg: nugit.tube.configuration.TubeRestartConfig) = Reader{ (cfg: TubeConfig) ⇒
+                        (defaultCfg: nugit.tube.configuration.TubeRestartConfig) : Reader[TubeConfig, Unit] = Reader{ (cfg: TubeConfig) ⇒
     cfg match {
       case TubeConfig("none", _)        ⇒ env.setRestartStrategy(RestartStrategies.noRestart())
       case TubeConfig("fixed-delay", _) ⇒
