@@ -25,7 +25,7 @@ trait ChannelAlgos {
     val channelNameA = "more than or equal to 5 members"
     val channelNameB = "less than 5 members"
 
-    val (channels, logs) = getChannelListing(Config.channelListConfig)(timeout).run(testToken)
+    val (channels, logs) = getChannelListing(Config.channelListConfig)(timeout).run(token)
     println(s"Total number of channels: ${channels.size}")
     channels.map(c => println(c.id+","+c.name))
     val channelsEnv = env.fromCollection(channels)
