@@ -9,7 +9,7 @@ import Prop.{forAll, throws, AnyOperators}
 import com.typesafe.config._
 
 
-object ConfigurationData { 
+object ConfigurationData {
 
   val overrideRestartStrategyOnly = Array(
     Array("--restart-strategy", "none"),
@@ -42,7 +42,7 @@ class CliSpecs extends mutable.Specification with ScalaCheck { override def is =
   def parallelismWhenOverrideNo = {
     import ConfigurationData.arbGenGoodCfg1
     prop { (args : Array[String]) ⇒
-      parseCommandlineArgs(args.toSeq) match { 
+      parseCommandlineArgs(args.toSeq) match {
         case Some(cfg) ⇒ cfg.parallelism == 1
         case None ⇒ false // this should not happen
       }
