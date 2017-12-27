@@ -1,13 +1,14 @@
 package nugit.tube
 
 import cats._, data._, implicits._
-
 import org.apache.flink.streaming.api.scala._
 import org.apache.flink.streaming.api.functions.sink._
 import org.apache.flink.api.common.time.Time
 import org.apache.flink.api.common.restartstrategy._
+import nugit.routes._
 import nugit.tube.api.channels._
 import nugit.tube.api.users._
+import akka.http.scaladsl._
 
 object Main extends ChannelAlgos with UsersAlgos {
   import nugit.tube.api.SlackFunctions._
@@ -82,7 +83,19 @@ object Main extends ChannelAlgos with UsersAlgos {
 
     // Actually call to Slack via slacks
     // displayChannel(env).run(testToken)
-    retrieveUsers(Config.usersListConfig, env).run(testToken)
+    val (users, logs) =
+      retrieveUsers(Config.usersListConfig, env).run(testToken)
+
+    // Load configuration which contains the whereabouts of cerebro and
+    // transmit the data over.
+    nugit.tube.configuration.ConfigValidator.loadCerebroConfig(Config.config).toOption match {
+      case Some(cerebroConfig) ⇒ 
+        implicit val http : HttpExt = Http()
+        transferToCerebro(cerebroConfig)(new RealHttpService).run(users)
+      case None ⇒ 
+        println("Cerebro's configuration is borked. Exiting.")
+        System.exit(-1)
+    }
 
     val sleepTime = 5000
     Thread.sleep(sleepTime)
