@@ -22,8 +22,8 @@ class UsersAlgosSpecs extends mutable.Specification with ScalaCheck with AfterAl
   implicit val actorMaterializer = ActorMaterializer()
 
   def afterAll() : Unit = {
-    actorMaterializer.shutdown
-    actorSystem.shutdown
+    actorMaterializer.shutdown()
+    actorSystem.shutdown()
   }
 
   def emptyCollectionWhenTokenInvalid = {
