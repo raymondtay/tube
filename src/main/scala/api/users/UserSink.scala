@@ -31,6 +31,7 @@ class UserSink(cerebroConfig : CerebroConfig) extends RichSinkFunction[List[User
   import org.http4s._
   import org.http4s.dsl._
   import org.http4s.circe._
+  import org.http4s.headers._
   import org.http4s.client._
   import org.http4s.client.blaze._
 
@@ -62,6 +63,7 @@ class UserSink(cerebroConfig : CerebroConfig) extends RichSinkFunction[List[User
       case Left(error) ⇒ "Unable to parse cerebro's configuration".asLeft
       case Right(config) ⇒
         val req = POST(uri=config, Users(record).asJson.noSpaces)
+        req.putHeaders(`Content-Type`(MediaType.`application/json`))
         if (httpClient == null) { /* necessary because 3rd party libs are not Serializable */
           httpClient = PooledHttp1Client()
         }
