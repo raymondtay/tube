@@ -14,64 +14,43 @@ import cats._, data._, implicits._
 import akka.http.scaladsl.{Http, HttpExt}
 import akka.http.scaladsl.model._
 
-trait UsersAlgos extends nugit.tube.api.Implicits {
+protected[users] case class Users(users : List[User])
+
+trait UsersAlgos {
 
   /** 
-    * Demonstration of retrieving all users
+    * Demonstration of retrieving all users and how this works is:
+    * (a) when slack token is invalid or slack is unreachable, an empty
+    *     collection of users and logs is returned to caller
+    * (b) if slack token is valid and able to retrieve users (from Slack), then
+    *     tube would attempt to connect to cerebro via REST and stream to it;
+    *     any errors encountered would throw a runtime error - this is
+    *     necessary so that Flink recognizes it and restarts it based on the
+    *     `RestartStrategy` in Flink.
+    *     Once data is sunk, it is considered "gone" and we would return None.
+    *
     * @env StreamExecutionEnvironment instance
+    * @config configuration for retrieving slack via REST
+    * @cerebroConfig configuration that reveals where cerebro is hosted
     * @actorSystem  (environment derived)
     * @actorMaterializer (environment derived)
     * @token slack token
     */
-  def retrieveUsers(config: NonEmptyList[ConfigValidation] Either SlackUsersListConfig[String],
+  def runSeedSlackUsersGraph(config: NonEmptyList[ConfigValidation] Either SlackUsersListConfig[String],
+                    cerebroConfig : CerebroConfig,
                     env: StreamExecutionEnvironment)
-                   (implicit actorSystem : ActorSystem, actorMaterializer : ActorMaterializer) : Reader[SlackAccessToken[String], (List[User], List[String])] = Reader{ (token: SlackAccessToken[String]) ⇒
+                   (implicit actorSystem : ActorSystem, actorMaterializer : ActorMaterializer) : Reader[SlackAccessToken[String], Option[(List[User], List[String])]] = Reader{ (token: SlackAccessToken[String]) ⇒
 
     val (users, logs) = retrieveAllUsers(config, timeout).run(token)
 
-    val usersCol = env.fromCollection(users)
-    /**
-      * TODOs: Decide the strategy we will be hitting Cerebro (seq or parallel)
-      * and we need to handle the scatter-gather situation.
-      */
-    val usersCount =
-      usersCol.map{(_, 1)}.
-      keyBy(0).
-      sum(1)
-    env.execute
-
-    println(s"Total number of users: ${usersCount.print}")
-    println(s"Total number of users: ${users.size}")
-
-    (users, logs)
+    users match {
+      case Nil ⇒ ((users, logs)).some
+      case _   ⇒
+        env.fromCollection(users :: Nil).addSink(new UserSink(cerebroConfig))
+        env.execute("cerebro-seed-slack-users")
+        /* NOTE: be aware that RTEs can be thrown here */
+        none
+    }
   }
-
-  /**
-    * Performs a RESTful call to Cerebro
-    * @cerebroConfig 
-    * @httpService
-    * @users the collection of users we are going to transmit over the wire
-    */
-  def transferToCerebro(cerebroConfig : CerebroConfig)
-                       (httpService : HttpService)
-                       (implicit http : HttpExt, actorSystem : ActorSystem, actorMaterializer : ActorMaterializer) = Reader{ (users: List[User]) ⇒
-    import akka.http.scaladsl.model.ContentTypes._
-    import io.circe._, io.circe.parser._, io.circe.syntax._ , io.circe.generic.semiauto._
-
-    implicit val uenc = deriveEncoder[providers.slack.models.User]
-    implicit val usersEnc = deriveEncoder[Users]
-
-    println(Users(users).asJson.noSpaces)
-
-    val httpRequest =
-      HttpRequest(HttpMethods.POST,
-                  uri = cerebroConfig.url,
-                  entity = HttpEntity(`application/json`, Users(users).asJson.noSpaces))
-    // Invoke
-    httpService.makeSingleRequest.run(httpRequest)
-  }
-
 }
-
-protected[users] case class Users(users : List[User])
 

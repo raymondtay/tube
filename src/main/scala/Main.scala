@@ -75,23 +75,17 @@ object Main extends ChannelAlgos with UsersAlgos {
 
     val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
     setupRestartOption(env)(defaultCfg)(commandlineCfg)
-
     env.setParallelism(commandlineCfg.parallelism)
 
     implicit val actorSystem = ActorSystem("ChannelListingActorSystem")
     implicit val actorMaterializer = ActorMaterializer()
 
-    // Actually call to Slack via slacks
-    // displayChannel(env).run(testToken)
-    val (users, logs) =
-      retrieveUsers(Config.usersListConfig, env).run(testToken)
 
     // Load configuration which contains the whereabouts of cerebro and
     // transmit the data over.
     nugit.tube.configuration.ConfigValidator.loadCerebroConfig(Config.config).toOption match {
       case Some(cerebroConfig) ⇒ 
-        implicit val http : HttpExt = Http()
-        transferToCerebro(cerebroConfig)(new RealHttpService).run(users)
+          runSeedSlackUsersGraph(Config.usersListConfig, cerebroConfig, env).run(testToken)
       case None ⇒ 
         println("Cerebro's configuration is borked. Exiting.")
         System.exit(-1)
