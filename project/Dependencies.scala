@@ -18,6 +18,15 @@ object Dependencies {
   val shapelessVersion   = "2.3.2"
   val scoptVersion       = "3.7.0"
   val scalaTestVersion   = "3.0.4"
+  val http4sVersion = "0.17.6"
+  val http4s = Seq(
+    "org.http4s" %% "http4s-dsl" % http4sVersion,
+    "org.http4s" %% "http4s-blaze-server" % http4sVersion,
+    "org.http4s" %% "http4s-blaze-client" % http4sVersion,
+    "org.http4s" %% "http4s-circe" % http4sVersion,
+    "io.circe" %% "circe-generic" % circeVersion,
+    "io.circe" %% "circe-literal" % circeVersion
+  )
 
   // Libraries
   val cats           = "org.typelevel" %% "cats-core" % catsVersion
@@ -56,7 +65,7 @@ object Dependencies {
   val scalaTest = "org.scalatest" %% "scalatest" % scalaTestVersion
 
   // Grouping the libraries to logical units
-  val generalLibs = Seq(cats, akkaHttp, akkaStream, akkaActors, shapeless, fastparse, scopt) ++ logger ++ circeJson ++ openTracing ++ flinkLibs
+  val generalLibs = Seq(cats, akkaHttp, akkaStream, akkaActors, shapeless, fastparse, scopt) ++ logger ++ circeJson ++ openTracing ++ flinkLibs ++ http4s
 
   val testLibs = Seq(akkaHttpTest, specs2ScalaCheckTest, specs2Test, scalaTest, flinkTest).map( _ % Test )
 
