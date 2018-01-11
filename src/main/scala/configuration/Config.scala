@@ -193,7 +193,7 @@ sealed trait ConfigValidator extends TimeUnitParser {
     import record._, shapeless.syntax.singleton._
     var n : NONEGen.Repr = NONEGen.to(NONE(0L, 0L))
     (validateAttempt(cfg),
-     validateDelay(cfg)).map2{
+     validateDelay(cfg)).mapN{
         (attempt, delay) ⇒
           NONEGen.from(n.updateWith('attempts)(_ + attempt).updateWith('delay)(_ + delay))
       }
@@ -203,7 +203,7 @@ sealed trait ConfigValidator extends TimeUnitParser {
     import record._, shapeless.syntax.singleton._
     var n : FixedDelayGen.Repr = FixedDelayGen.to(FixedDelay(0L, 0L))
     (validateAttempt(cfg),
-     validateDelay(cfg)).map2{
+     validateDelay(cfg)).mapN{
         (attempt, delay) ⇒
           FixedDelayGen.from(n.updateWith('attempts)(_ + attempt).updateWith('delay)(_ + delay))
       }
@@ -214,7 +214,7 @@ sealed trait ConfigValidator extends TimeUnitParser {
     var n : FailureRateGen.Repr = FailureRateGen.to(FailureRate(0L, 0L, 0L))
     (validateFailureRate(cfg),
      validateDelay(cfg),
-     validateMaxFailuresPerInterval(cfg)).map3{
+     validateMaxFailuresPerInterval(cfg)).mapN{
         (failureRate, maxFailuresPerInterval, delay) ⇒
           FailureRateGen.from(n.updateWith('failure_rate_interval)(_ + failureRate).updateWith('delay)(_ + delay).updateWith('max_failures_per_interval)(_ + maxFailuresPerInterval))
       }
@@ -269,7 +269,7 @@ object ConfigValidator extends ConfigValidator {
      validateHost(config),
      validatePort(config),
      validateUri(config),
-     validateUrl(config)).map5((m,h,p,uri,url) ⇒ CerebroConfig(m,h,p,uri,url))
+     validateUrl(config)).mapN((m,h,p,uri,url) ⇒ CerebroConfig(m,h,p,uri,url))
 
 }
 

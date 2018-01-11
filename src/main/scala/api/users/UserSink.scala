@@ -23,20 +23,21 @@ case class CerebroNOK(errors : List[io.circe.JsonObject]) /* As long as we see t
   */
 class UserSink(cerebroConfig : CerebroConfig) extends RichSinkFunction[List[User]] {
   import cats._, data._, implicits._
+  import cats.effect._
   import io.circe._
+  import io.circe.literal._
   import io.circe.generic.auto._
   import io.circe.syntax._
   import scala.concurrent.ExecutionContext.Implicits.global
   import scala.concurrent.duration._
   import org.http4s._
-  import org.http4s.dsl._
-  import org.http4s.circe._
-  import org.http4s.headers._
   import org.http4s.client._
+  import org.http4s.dsl.io._
+  import org.http4s.headers._
   import org.http4s.client.blaze._
 
   @transient implicit val logger = LoggerFactory.getLogger(classOf[UserSink])
-  @transient private[this] var httpClient = PooledHttp1Client()
+  @transient private[this] var httpClient = Http1Client[IO]().unsafeRunSync
 
   /* Flink calls this when it needs to send */
   override def invoke(record : List[User]) : Unit = {
@@ -49,7 +50,7 @@ class UserSink(cerebroConfig : CerebroConfig) extends RichSinkFunction[List[User
   }
 
   private def onError(error : String) {
-    logger.info(s"Error detected while sending data to Cerebro: $error")
+    logger.error(s"Error detected while sending data to Cerebro: $error")
     httpClient.shutdownNow()
     throw new RuntimeException("Error detected while xfer to Cerebro")
   }
@@ -58,16 +59,16 @@ class UserSink(cerebroConfig : CerebroConfig) extends RichSinkFunction[List[User
     httpClient.shutdownNow()
   }
 
-  private def transferToCerebro : Reader[List[User], Either[String,String]] = Reader{ (record: List[User]) ⇒
+  private def transferToCerebro : Reader[List[User], Either[String,IO[String]]] = Reader{ (record: List[User]) ⇒
     Uri.fromString(cerebroConfig.url) match {
       case Left(error) ⇒ "Unable to parse cerebro's configuration".asLeft
       case Right(config) ⇒
-        val req = POST(uri=config, Users(record).asJson.noSpaces)
+        val req = Request[IO](method = POST, uri=config).withBody(Users(record).asJson.noSpaces)
         req.putHeaders(`Content-Type`(MediaType.`application/json`))
         if (httpClient == null) { /* necessary because 3rd party libs are not Serializable */
-          httpClient = PooledHttp1Client()
+          httpClient = Http1Client[IO]().unsafeRunSync
         }
-        Either.catchOnly[java.net.ConnectException](httpClient.expect[String](req).unsafeRun) match {
+        Either.catchOnly[java.net.ConnectException](httpClient.expect[String](req)) match {
           case Left(cannotConnect) ⇒ "cannot connect to cerebro".asLeft
           case Right(ok) ⇒ ok.asRight
         }
@@ -78,8 +79,9 @@ class UserSink(cerebroConfig : CerebroConfig) extends RichSinkFunction[List[User
    * to be either `CerebroNOK` which means that there's invalid json data
    * otherwise its "unknown"
    */
-  private def parseResponse : Reader[String, Either[String,Boolean]] = Reader{ (jsonString: String) ⇒
+  private def parseResponse : Reader[IO[String], Either[String,Boolean]] = Reader{ (jsonEffect: IO[String]) ⇒
     import io.circe.parser._
+    val jsonString = jsonEffect.unsafeRunSync
     decode[CerebroOK](jsonString) match {
       case Left(error) ⇒
         decode[CerebroNOK](jsonString) match {

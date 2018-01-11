@@ -2,7 +2,8 @@ import Dependencies._
 
 // Leverage Maven's repository and not look for the local
 resolvers in ThisBuild ++= Seq(
-    "Apache Development Snapshot Repository" at "https://repository.apache.org/content/repositories/snapshots/"
+    "Apache Development Snapshot Repository" at "https://repository.apache.org/content/repositories/snapshots/",
+    Resolver.sonatypeRepo("snapshots") /* for snapshots only */
 )
 
 val commonSettings = Seq(

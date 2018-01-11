@@ -3,12 +3,12 @@ import sbt._
 object Dependencies {
 
   // Versions
-  val catsVersion       = "0.9.0"
+  val catsVersion       = "1.0.1"
   val akkaHttpVersion   = "10.0.10"
   val akkaVersion       = "2.4.19"
   val scalaCheckVersion = "1.13.4"
   val specs2Version     = "4.0.1"
-  val circeVersion      = "0.8.0"
+  val circeVersion      = "0.9.0"
   val openTracingVersion = "0.30.0"
   val jaegerCoreVersion  = "0.22.0-RC2"
   val scalaLoggerVersion = "3.7.2"
@@ -18,7 +18,7 @@ object Dependencies {
   val shapelessVersion   = "2.3.2"
   val scoptVersion       = "3.7.0"
   val scalaTestVersion   = "3.0.4"
-  val http4sVersion = "0.17.6"
+  val http4sVersion = "0.18.0-SNAPSHOT"
   val http4s = Seq(
     "org.http4s" %% "http4s-dsl" % http4sVersion,
     "org.http4s" %% "http4s-blaze-server" % http4sVersion,
