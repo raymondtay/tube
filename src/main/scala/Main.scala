@@ -5,6 +5,7 @@ import org.apache.flink.streaming.api.scala._
 import org.apache.flink.streaming.api.functions.sink._
 import org.apache.flink.api.common.time.Time
 import org.apache.flink.api.common.restartstrategy._
+import org.apache.flink.streaming.api.environment.CheckpointConfig
 import nugit.routes._
 import nugit.tube.api.channels._
 import nugit.tube.api.users._
@@ -74,6 +75,12 @@ object Main extends ChannelAlgos with UsersAlgos {
     val (commandlineCfg, defaultCfg) = loadedConfiguration.get
 
     val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
+
+    val checkpointingInterval = 50
+    env.enableCheckpointing(checkpointingInterval) // checkpoint every 50 ms
+    val config = env.getCheckpointConfig
+    config.enableExternalizedCheckpoints(CheckpointConfig.ExternalizedCheckpointCleanup.RETAIN_ON_CANCELLATION)
+
     setupRestartOption(env)(defaultCfg)(commandlineCfg)
     env.setParallelism(commandlineCfg.parallelism)
 
@@ -84,9 +91,9 @@ object Main extends ChannelAlgos with UsersAlgos {
     // Load configuration which contains the whereabouts of cerebro and
     // transmit the data over.
     nugit.tube.configuration.ConfigValidator.loadCerebroConfig(Config.config).toOption match {
-      case Some(cerebroConfig) ⇒ 
+      case Some(cerebroConfig) ⇒
           runSeedSlackUsersGraph(Config.usersListConfig, cerebroConfig, env).run(testToken)
-      case None ⇒ 
+      case None ⇒
         println("Cerebro's configuration is borked. Exiting.")
         System.exit(-1)
     }
