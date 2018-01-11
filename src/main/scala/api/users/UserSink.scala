@@ -63,8 +63,7 @@ class UserSink(cerebroConfig : CerebroConfig) extends RichSinkFunction[List[User
     Uri.fromString(cerebroConfig.url) match {
       case Left(error) ⇒ "Unable to parse cerebro's configuration".asLeft
       case Right(config) ⇒
-        val req = Request[IO](method = POST, uri=config).withBody(Users(record).asJson.noSpaces)
-        req.putHeaders(`Content-Type`(MediaType.`application/json`))
+        val req = Request[IO](method = POST, uri=config).withBody(Users(record).asJson.noSpaces).putHeaders(`Content-Type`(MediaType.`application/json`))
         if (httpClient == null) { /* necessary because 3rd party libs are not Serializable */
           httpClient = Http1Client[IO]().unsafeRunSync
         }
