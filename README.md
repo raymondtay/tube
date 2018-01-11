@@ -34,6 +34,14 @@ of current libraries in project to latest versions on Maven would be:
 sbt dependencyUpdates
 ```
 
+Upgraded `tube`'s dependencies so that we can resolve the binary incompatibilities that arose from the 3rd party libraries that `tube` is leveraging upon. See `slacks`'s README.md for details.
+
+Library name | Current version | Comments
+-------------| ----------------|----------
+`Cats`       | 1.0.1           | Upgrade from 0.9.0
+`Eff`        | 5.0.0-RC1-20180101142835-0e4b73e| Bumped from `4.5.0` to support latest `Cats`
+`Circe`      | 0.9.0 | Bumped from `0.8.0` to support latest `Cats`
+
 ## Code coverage 
 
 `tube` uses code coverage via [scoverage](https://github.com/scoverage/sbt-scoverage) because we believe we don't deliver shit to users.
