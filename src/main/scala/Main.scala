@@ -12,6 +12,7 @@ import nugit.tube.api.users._
 import akka.http.scaladsl._
 
 object Main extends ChannelAlgos with UsersAlgos {
+  import nugit.tube.configuration.{JobTypes, RestartTypes}
   import nugit.tube.api.SlackFunctions._
   import cats.data.Validated._
   import slacks.core.config._
@@ -51,11 +52,11 @@ object Main extends ChannelAlgos with UsersAlgos {
   def setupRestartOption(env : StreamExecutionEnvironment)
                         (defaultCfg: nugit.tube.configuration.TubeRestartConfig) : Reader[TubeConfig, Unit] = Reader{ (cfg: TubeConfig) ⇒
     cfg match {
-      case TubeConfig("none", _)        ⇒ env.setRestartStrategy(RestartStrategies.noRestart())
-      case TubeConfig("fixed-delay", _) ⇒
+      case TubeConfig(RestartTypes.none, _, _)        ⇒ env.setRestartStrategy(RestartStrategies.noRestart())
+      case TubeConfig(RestartTypes.fixed_delay, _, _) ⇒
         val _c = defaultCfg.fdCfg
         env.setRestartStrategy(RestartStrategies.fixedDelayRestart(_c.attempts.toInt, Time.milliseconds(_c.delay)))
-      case TubeConfig("failure-rate", _) ⇒
+      case TubeConfig(RestartTypes.failure_rate, _, _) ⇒
         val _c = defaultCfg.frCfg
         env.setRestartStrategy(RestartStrategies.failureRateRestart(_c.max_failures_per_interval.toInt, Time.milliseconds(_c.failure_rate_interval), Time.milliseconds(_c.delay)))
     }

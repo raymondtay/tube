@@ -10,8 +10,20 @@ import shapeless._
   * @version 1.0
   */
 
+object RestartTypes extends Enumeration {
+  type RestartType = Value
+  val none , fixed_delay, failure_rate = Value
+}
+
+object JobTypes extends Enumeration {
+  type JobType = Value
+  val seed_users , seed_channels = Value
+}
+
 object Config {
   lazy val config = ConfigFactory.load()
+  lazy val jobTypes = Set(JobTypes.seed_users.toString, JobTypes.seed_channels.toString)
+  lazy val restartTypes = Set(RestartTypes.none.toString, RestartTypes.fixed_delay.toString, RestartTypes.failure_rate.toString)
 }
 
 sealed trait ConfigValidation {
