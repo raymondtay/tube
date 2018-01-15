@@ -1,7 +1,7 @@
-package nugit.tube.api.users
+package nugit.tube.api.channels
 
-import nugit.tube.configuration.CerebroSeedUsersConfig
-import providers.slack.models.User
+import nugit.tube.configuration.CerebroSeedChannelsConfig
+import providers.slack.models.SlackChannel
 import org.slf4j.{Logger, LoggerFactory}
 import org.apache.flink.streaming.api.functions.sink._
 
@@ -21,7 +21,7 @@ case class CerebroNOK(message : List[io.circe.JsonObject]) /* As long as we see 
   * thrown and that should restart the sending process by Flink
   * Refer to [https://ci.apache.org/projects/flink/flink-docs-release-1.4/dev/restart_strategies.html#restart-strategies-1]
   */
-class UserSink(cerebroConfig : CerebroSeedUsersConfig) extends RichSinkFunction[List[User]] {
+class ChannelSink(cerebroConfig : CerebroSeedChannelsConfig) extends RichSinkFunction[List[SlackChannel]] {
   import cats._, data._, implicits._
   import cats.effect._
   import io.circe._
@@ -36,11 +36,11 @@ class UserSink(cerebroConfig : CerebroSeedUsersConfig) extends RichSinkFunction[
   import org.http4s.headers._
   import org.http4s.client.blaze._
 
-  @transient implicit val logger = LoggerFactory.getLogger(classOf[UserSink])
+  @transient implicit val logger = LoggerFactory.getLogger(classOf[ChannelSink])
   @transient private[this] var httpClient = Http1Client[IO]().unsafeRunSync
 
   /* Flink calls this when it needs to send */
-  override def invoke(record : List[User]) : Unit = {
+  override def invoke(record : List[SlackChannel]) : Unit = {
     transferToCerebro.run(record) match {
       case Left(error) ⇒ throw new RuntimeException(error)
       case Right(result) ⇒
@@ -59,11 +59,11 @@ class UserSink(cerebroConfig : CerebroSeedUsersConfig) extends RichSinkFunction[
     httpClient.shutdownNow()
   }
 
-  private def transferToCerebro : Reader[List[User], Either[String,IO[String]]] = Reader{ (record: List[User]) ⇒
+  private def transferToCerebro : Reader[List[SlackChannel], Either[String,IO[String]]] = Reader{ (record: List[SlackChannel]) ⇒
     Uri.fromString(cerebroConfig.url) match {
       case Left(error) ⇒ "Unable to parse cerebro's configuration".asLeft
       case Right(config) ⇒
-        val req = Request[IO](method = POST, uri=config).withBody(Users(record).asJson.noSpaces).putHeaders(`Content-Type`(MediaType.`application/json`))
+        val req = Request[IO](method = POST, uri=config).withBody(Channels(record).asJson.noSpaces).putHeaders(`Content-Type`(MediaType.`application/json`))
         if (httpClient == null) { /* necessary because 3rd party libs are not Serializable */
           httpClient = Http1Client[IO]().unsafeRunSync
         }

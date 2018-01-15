@@ -13,12 +13,12 @@ object ConfigurationData {
 
   val overrideRestartStrategyOnly = Array(
     Array("--restart-strategy", "none"),
-    Array("--restart-strategy", "fixed-delay")
+    Array("--restart-strategy", "fixed_delay")
   )
 
   val overrideParallelismOnly = Array(
     Array("--parallelism", "2", "--restart-strategy", "none"),
-    Array("--parallelism", "3", "--restart-strategy", "fixed-delay")
+    Array("--parallelism", "3", "--restart-strategy", "fixed_delay")
   )
 
   val genGoodCfg1 = for { cfg <- oneOf(overrideRestartStrategyOnly) } yield cfg
