@@ -77,7 +77,8 @@ case class MissingCerebrokey(keyname: String) extends ConfigValidation {
 // Cerebro's Configuration
 case class CerebroConfig(
   seedUsersCfg : CerebroSeedUsersConfig,
-  seedChannelsCfg : CerebroSeedChannelsConfig
+  seedChannelsCfg : CerebroSeedChannelsConfig,
+  seedPostsCfg : CerebroSeedPostsConfig
 )
 case class CerebroSeedUsersConfig(
   method: String,
@@ -87,6 +88,13 @@ case class CerebroSeedUsersConfig(
   url : String
   )
 case class CerebroSeedChannelsConfig(
+  method: String,
+  hostname : String,
+  port : Int,
+  uri: String,
+  url : String
+  )
+case class CerebroSeedPostsConfig(
   method: String,
   hostname : String,
   port : Int,
@@ -297,7 +305,12 @@ object ConfigValidator extends ConfigValidator {
      validateHost(config, "channels"),
      validatePort(config, "channels"),
      validateUri(config,  "channels"),
-     validateUrl(config,  "channels")).mapN((m,h,p,uri,url) ⇒ CerebroSeedChannelsConfig(m,h,p,uri,url))).mapN((usersCfg, channelsCfg) ⇒ CerebroConfig(usersCfg, channelsCfg))
+     validateUrl(config,  "channels")).mapN((m,h,p,uri,url) ⇒ CerebroSeedChannelsConfig(m,h,p,uri,url)),
+    (validateUrlHttpMethod(config, "posts"),
+     validateHost(config, "posts"),
+     validatePort(config, "posts"),
+     validateUri(config,  "posts"),
+     validateUrl(config,  "posts")).mapN((m,h,p,uri,url) ⇒ CerebroSeedPostsConfig(m,h,p,uri,url))).mapN((usersCfg, channelsCfg, postsCfg) ⇒ CerebroConfig(usersCfg, channelsCfg, postsCfg))
 
 }
 

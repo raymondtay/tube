@@ -85,7 +85,7 @@ object Main extends ChannelAlgos with UsersAlgos {
     setupRestartOption(env)(defaultCfg)(commandlineCfg)
     env.setParallelism(commandlineCfg.parallelism)
 
-    implicit val actorSystem = ActorSystem("ChannelListingActorSystem")
+    implicit val actorSystem = ActorSystem("TubeActorSystem")
     implicit val actorMaterializer = ActorMaterializer()
 
 
