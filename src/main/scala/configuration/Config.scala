@@ -140,9 +140,9 @@ sealed trait ConfigValidator extends TimeUnitParser {
   type ValidationResult[A] = ValidatedNel[ConfigValidation, A]
 
   def validateUrlHttpMethod(c: Config, namespace: String) : ValidationResult[String] =
-    Try{c.getString(s"tube.cerebro.seed.url.${namespace}.method")}.toOption match {
+    Try{c.getString(s"tube.cerebro.seed.${namespace}.url.method")}.toOption match {
       case Some(cerebroSeedUrlMethod) ⇒ cerebroSeedUrlMethod.validNel
-      case None ⇒ MissingCerebrokey(s"tube.cerebro.seed.url.${namespace}.method").invalidNel
+      case None ⇒ MissingCerebrokey(s"tube.cerebro.seed.${namespace}.url.method").invalidNel
     }
 
   def validateHost(c: Config, namespace: String) : ValidationResult[String] =

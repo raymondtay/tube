@@ -93,7 +93,10 @@ object Main extends ChannelAlgos with UsersAlgos {
     // transmit the data over.
     nugit.tube.configuration.ConfigValidator.loadCerebroConfig(Config.config).toOption match {
       case Some(cerebroConfig) ⇒
+        if (commandlineCfg.job_type == JobTypes.seed_users)
           runSeedSlackUsersGraph(Config.usersListConfig, cerebroConfig.seedUsersCfg, env).run(testToken)
+        if (commandlineCfg.job_type == JobTypes.seed_channels)
+          runSeedSlackChannelsGraph(Config.channelListConfig, cerebroConfig.seedChannelsCfg, env).run(testToken)
       case None ⇒
         println("Cerebro's configuration is borked. Exiting.")
         System.exit(-1)
