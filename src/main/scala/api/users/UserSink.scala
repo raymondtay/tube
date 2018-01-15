@@ -1,6 +1,6 @@
 package nugit.tube.api.users
 
-import nugit.tube.configuration.CerebroConfig
+import nugit.tube.configuration.CerebroSeedUsersConfig
 import providers.slack.models.User
 import org.slf4j.{Logger, LoggerFactory}
 import org.apache.flink.streaming.api.functions.sink._
@@ -21,7 +21,7 @@ case class CerebroNOK(errors : List[io.circe.JsonObject]) /* As long as we see t
   * thrown and that should restart the sending process by Flink
   * Refer to [https://ci.apache.org/projects/flink/flink-docs-release-1.4/dev/restart_strategies.html#restart-strategies-1]
   */
-class UserSink(cerebroConfig : CerebroConfig) extends RichSinkFunction[List[User]] {
+class UserSink(cerebroConfig : CerebroSeedUsersConfig) extends RichSinkFunction[List[User]] {
   import cats._, data._, implicits._
   import cats.effect._
   import io.circe._
