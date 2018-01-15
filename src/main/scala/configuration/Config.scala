@@ -76,14 +76,25 @@ case class MissingCerebrokey(keyname: String) extends ConfigValidation {
 
 // Cerebro's Configuration
 case class CerebroConfig(
+  seedUsersCfg : CerebroSeedUsersConfig,
+  seedChannelsCfg : CerebroSeedChannelsConfig
+)
+case class CerebroSeedUsersConfig(
   method: String,
   hostname : String,
   port : Int,
   uri: String,
   url : String
-)
+  )
+case class CerebroSeedChannelsConfig(
+  method: String,
+  hostname : String,
+  port : Int,
+  uri: String,
+  url : String
+  )
 
-// 
+//
 // The `RestartStrategy` represents the configuration derived from the
 // configuration files and the developer can override these options by
 // providing counter arguments over the command line.
@@ -128,34 +139,34 @@ sealed trait ConfigValidator extends TimeUnitParser {
 
   type ValidationResult[A] = ValidatedNel[ConfigValidation, A]
 
-  def validateUrlHttpMethod(c: Config) : ValidationResult[String] =
-    Try{c.getString("tube.cerebro.seed.url.method")}.toOption match {
+  def validateUrlHttpMethod(c: Config, namespace: String) : ValidationResult[String] =
+    Try{c.getString(s"tube.cerebro.seed.url.${namespace}.method")}.toOption match {
       case Some(cerebroSeedUrlMethod) ⇒ cerebroSeedUrlMethod.validNel
-      case None ⇒ MissingCerebrokey("tube.cerebro.seed.url.method").invalidNel
+      case None ⇒ MissingCerebrokey(s"tube.cerebro.seed.url.${namespace}.method").invalidNel
     }
 
-  def validateHost(c: Config) : ValidationResult[String] =
-    Try{c.getString("tube.cerebro.seed.host")}.toOption match {
+  def validateHost(c: Config, namespace: String) : ValidationResult[String] =
+    Try{c.getString(s"tube.cerebro.seed.${namespace}.host")}.toOption match {
       case Some(cerebroSeedHost) ⇒ cerebroSeedHost.validNel
-      case None ⇒ MissingCerebrokey("tube.cerebro.seed.host").invalidNel
+      case None ⇒ MissingCerebrokey(s"tube.cerebro.seed.${namespace}.host").invalidNel
     }
 
-  def validatePort(c: Config) : ValidationResult[Int] =
-    Try{c.getInt("tube.cerebro.seed.port")}.toOption match {
+  def validatePort(c: Config, namespace: String) : ValidationResult[Int] =
+    Try{c.getInt(s"tube.cerebro.seed.${namespace}.port")}.toOption match {
       case Some(cerebroSeedPort) ⇒ cerebroSeedPort.validNel
-      case None ⇒ MissingCerebrokey("tube.cerebro.seed.port").invalidNel
+      case None ⇒ MissingCerebrokey(s"tube.cerebro.seed.${namespace}.port").invalidNel
     }
 
-  def validateUri(c: Config) : ValidationResult[String] =
-    Try{c.getString("tube.cerebro.seed.uri")}.toOption match {
+  def validateUri(c: Config, namespace: String) : ValidationResult[String] =
+    Try{c.getString(s"tube.cerebro.seed.${namespace}.uri")}.toOption match {
       case Some(cerebroSeedUri) ⇒ cerebroSeedUri.validNel
-      case None ⇒ MissingCerebrokey("tube.cerebro.seed.uri").invalidNel
+      case None ⇒ MissingCerebrokey(s"tube.cerebro.seed.${namespace}.uri").invalidNel
     }
 
-  def validateUrl(c: Config) : ValidationResult[String] =
-    Try{c.getString("tube.cerebro.seed.url.s")}.toOption match {
+  def validateUrl(c: Config, namespace: String) : ValidationResult[String] =
+    Try{c.getString(s"tube.cerebro.seed.${namespace}.url.s")}.toOption match {
       case Some(cerebroSeedUrl) ⇒ cerebroSeedUrl.validNel
-      case None ⇒ MissingCerebrokey("tube.cerebro.seed.url.s").invalidNel
+      case None ⇒ MissingCerebrokey(s"tube.cerebro.seed.${namespace}.url.s").invalidNel
     }
 
   def getSupportedStrategies(c : Config) : ValidationResult[Set[String]] = {
@@ -277,11 +288,16 @@ object ConfigValidator extends ConfigValidator {
 
   // Loads Cerebro's configuration
   def loadCerebroConfig(config: Config) =
-    (validateUrlHttpMethod(config),
-     validateHost(config),
-     validatePort(config),
-     validateUri(config),
-     validateUrl(config)).mapN((m,h,p,uri,url) ⇒ CerebroConfig(m,h,p,uri,url))
+    ((validateUrlHttpMethod(config, "users"),
+     validateHost(config, "users"),
+     validatePort(config, "users"),
+     validateUri(config,  "users"),
+     validateUrl(config,  "users")).mapN((m,h,p,uri,url) ⇒ CerebroSeedUsersConfig(m,h,p,uri,url)),
+    (validateUrlHttpMethod(config, "channels"),
+     validateHost(config, "channels"),
+     validatePort(config, "channels"),
+     validateUri(config,  "channels"),
+     validateUrl(config,  "channels")).mapN((m,h,p,uri,url) ⇒ CerebroSeedChannelsConfig(m,h,p,uri,url))).mapN((usersCfg, channelsCfg) ⇒ CerebroConfig(usersCfg, channelsCfg))
 
 }
 
