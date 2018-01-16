@@ -17,12 +17,12 @@ object RestartTypes extends Enumeration {
 
 object JobTypes extends Enumeration {
   type JobType = Value
-  val seed_users , seed_channels = Value
+  val seed_users , seed_channels, seed_posts = Value
 }
 
 object Config {
   lazy val config = ConfigFactory.load()
-  lazy val jobTypes = Set(JobTypes.seed_users.toString, JobTypes.seed_channels.toString)
+  lazy val jobTypes = Set(JobTypes.seed_users.toString, JobTypes.seed_channels.toString, JobTypes.seed_posts.toString)
   lazy val restartTypes = Set(RestartTypes.none.toString, RestartTypes.fixed_delay.toString, RestartTypes.failure_rate.toString)
 }
 

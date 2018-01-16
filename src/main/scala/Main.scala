@@ -8,10 +8,11 @@ import org.apache.flink.api.common.restartstrategy._
 import org.apache.flink.streaming.api.environment.CheckpointConfig
 import nugit.routes._
 import nugit.tube.api.channels._
+import nugit.tube.api.posts._
 import nugit.tube.api.users._
 import akka.http.scaladsl._
 
-object Main extends ChannelAlgos with UsersAlgos {
+object Main extends ChannelAlgos with UsersAlgos with PostsAlgos {
   import nugit.tube.configuration.{JobTypes, RestartTypes}
   import nugit.tube.api.SlackFunctions._
   import cats.data.Validated._
@@ -97,6 +98,8 @@ object Main extends ChannelAlgos with UsersAlgos {
           runSeedSlackUsersGraph(Config.usersListConfig, cerebroConfig.seedUsersCfg, env).run(testToken)
         if (commandlineCfg.job_type == JobTypes.seed_channels)
           runSeedSlackChannelsGraph(Config.channelListConfig, cerebroConfig.seedChannelsCfg, env).run(testToken)
+        if (commandlineCfg.job_type == JobTypes.seed_posts)
+          runSeedSlackPostsGraph(Config.channelListConfig, Config.channelReadConfig, cerebroConfig.seedPostsCfg, env).run(testToken)
       case None ⇒
         println("Cerebro's configuration is borked. Exiting.")
         System.exit(-1)

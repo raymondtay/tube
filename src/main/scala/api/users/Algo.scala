@@ -37,9 +37,9 @@ trait UsersAlgos {
     * @token slack token
     */
   def runSeedSlackUsersGraph(config: NonEmptyList[ConfigValidation] Either SlackUsersListConfig[String],
-                    cerebroConfig : CerebroSeedUsersConfig,
-                    env: StreamExecutionEnvironment)
-                   (implicit actorSystem : ActorSystem, actorMaterializer : ActorMaterializer) : Reader[SlackAccessToken[String], Option[(List[User], List[String])]] = Reader{ (token: SlackAccessToken[String]) ⇒
+                             cerebroConfig : CerebroSeedUsersConfig,
+                             env: StreamExecutionEnvironment)
+                            (implicit actorSystem : ActorSystem, actorMaterializer : ActorMaterializer) : Reader[SlackAccessToken[String], Option[(List[User], List[String])]] = Reader{ (token: SlackAccessToken[String]) ⇒
 
     val (users, logs) = retrieveAllUsers(config, timeout).run(token)
 

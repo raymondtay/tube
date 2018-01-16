@@ -41,7 +41,7 @@ trait ChannelAlgos {
                     env: StreamExecutionEnvironment)
                    (implicit actorSystem : ActorSystem, actorMaterializer : ActorMaterializer) : Reader[SlackAccessToken[String], Option[(List[SlackChannel], List[String])]] = Reader{ (token: SlackAccessToken[String]) ⇒
 
-    val (channels, logs) = getChannelListing(Config.channelListConfig)(timeout).run(token)
+    val (channels, logs) = getChannelListing(Config.channelListConfig).run(token)
 
     channels match {
       case Nil ⇒ ((channels, logs)).some
@@ -72,7 +72,7 @@ trait ChannelAlgos {
     val channelNameA = "more than or equal to 5 members"
     val channelNameB = "less than 5 members"
 
-    val (channels, logs) = getChannelListing(Config.channelListConfig)(timeout).run(token)
+    val (channels, logs) = getChannelListing(Config.channelListConfig).run(token)
 
     println(s"Total number of channels: ${channels.size}")
 
@@ -116,7 +116,7 @@ trait ChannelAlgos {
     val channelNameA = "more than or equal to 5 members"
     val channelNameB = "less than 5 members"
 
-    val (channels, logs) = getChannelListing(config)(timeout).run(token)
+    val (channels, logs) = getChannelListing(config).run(token)
     println(s"Total number of channels: ${channels.size}")
     channels.map(c => println(c.id+","+c.name))
     val channelsEnv = env.fromCollection(channels)

@@ -86,7 +86,7 @@ class SlackApiSpecs(implicit ee: ExecutionEnv) extends Specification with ScalaC
     import ConfigurationData.arbBadListingConfigs
     prop { (config : Config) ⇒
       val parsedConfig = ConfigValidator.validateChannelConfig(config.getConfig("slacks.api.channel.list")).toEither
-      val (channels, validationErrors) = getChannelListing(parsedConfig)(2 second).run(token)
+      val (channels, validationErrors) = getChannelListing(parsedConfig).run(token)
       channels.size == 0 && validationErrors.size >= 1
     }
   }
@@ -113,7 +113,7 @@ class SlackApiSpecs(implicit ee: ExecutionEnv) extends Specification with ScalaC
 
     implicit val fakeService = new FakeChannelListingHttpService
     val token = SlackAccessToken("fake-token", "channel:list" :: Nil)
-    val (channels, loginfo) = getChannelListing(Config.channelListConfig)(2 second).run(token)
+    val (channels, loginfo) = getChannelListing(Config.channelListConfig).run(token)
     channels.size > 0
   }
 
@@ -124,7 +124,7 @@ class SlackApiSpecs(implicit ee: ExecutionEnv) extends Specification with ScalaC
 
     implicit val fakeService = new FakeChannelListingErrorHttpService
     val token = SlackAccessToken("fake-token", "channel:list" :: Nil)
-    val (channels, loginfo) = getChannelListing(Config.channelListConfig)(2 second).run(token)
+    val (channels, loginfo) = getChannelListing(Config.channelListConfig).run(token)
     channels.size == 0
   }
 
