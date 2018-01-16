@@ -42,7 +42,7 @@ class PostSink(cerebroConfig : CerebroSeedPostsConfig) extends RichSinkFunction[
   import org.http4s.client.blaze._
 
   @transient implicit val logger = LoggerFactory.getLogger(classOf[PostSink])
-  @transient private[this] var httpClient = Http1Client[IO]().unsafeRunSync
+  @transient private[this] var httpClient = Http1Client[IO](config = BlazeClientConfig.defaultConfig.copy(responseHeaderTimeout = cerebroConfig.timeout seconds)).unsafeRunSync
 
   /* Flink calls this when it needs to send */
   override def invoke(record : ((String,SievedMessages), List[String])) : Unit = {
@@ -70,7 +70,7 @@ class PostSink(cerebroConfig : CerebroSeedPostsConfig) extends RichSinkFunction[
       case Right(config) ⇒
         val req = Request[IO](method = POST, uri=config).withBody(record.asJson.noSpaces).putHeaders(`Content-Type`(MediaType.`application/json`))
         if (httpClient == null) { /* necessary because 3rd party libs are not Serializable */
-          httpClient = Http1Client[IO]().unsafeRunSync
+          httpClient = Http1Client[IO](config = BlazeClientConfig.defaultConfig.copy(responseHeaderTimeout = cerebroConfig.timeout seconds)).unsafeRunSync
         }
         Either.catchOnly[java.net.ConnectException](httpClient.expect[String](req)) match {
           case Left(cannotConnect) ⇒ "cannot connect to cerebro".asLeft

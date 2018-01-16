@@ -50,6 +50,10 @@ case object MissingDelayKey extends ConfigValidation {
   def errorMessage : String = "There was no key 'delay' found in 'tube.conf'."
 }
 
+case object MissingTimeoutKey extends ConfigValidation {
+  def errorMessage = "key: 'timeout' is missing in 'application.conf'."
+}
+
 case object MissingAttemptsKey extends ConfigValidation {
   def errorMessage : String = "There was no key 'attempts' found in 'tube.conf'."
 }
@@ -85,21 +89,24 @@ case class CerebroSeedUsersConfig(
   hostname : String,
   port : Int,
   uri: String,
-  url : String
+  url : String,
+  timeout : Long
   )
 case class CerebroSeedChannelsConfig(
   method: String,
   hostname : String,
   port : Int,
   uri: String,
-  url : String
+  url : String,
+  timeout : Long
   )
 case class CerebroSeedPostsConfig(
   method: String,
   hostname : String,
   port : Int,
   uri: String,
-  url : String
+  url : String,
+  timeout : Long
   )
 
 //
@@ -146,6 +153,13 @@ sealed trait ConfigValidator extends TimeUnitParser {
   val FailureRateGen = LabelledGeneric[FailureRate]
 
   type ValidationResult[A] = ValidatedNel[ConfigValidation, A]
+
+  def validateTimeout(c: Config, namespace : String) : ValidationResult[Long] = {
+    Try{c.getLong(s"tube.cerebro.seed.${namespace}.timeout")}.toOption match {
+      case Some(timeout) ⇒ timeout.validNel
+      case None ⇒ MissingTimeoutKey.invalidNel
+    }
+  }
 
   def validateUrlHttpMethod(c: Config, namespace: String) : ValidationResult[String] =
     Try{c.getString(s"tube.cerebro.seed.${namespace}.url.method")}.toOption match {
@@ -300,17 +314,20 @@ object ConfigValidator extends ConfigValidator {
      validateHost(config, "users"),
      validatePort(config, "users"),
      validateUri(config,  "users"),
-     validateUrl(config,  "users")).mapN((m,h,p,uri,url) ⇒ CerebroSeedUsersConfig(m,h,p,uri,url)),
+     validateUrl(config,  "users"),
+     validateTimeout(config, "users")).mapN((m,h,p,uri,url,timeout) ⇒ CerebroSeedUsersConfig(m,h,p,uri,url,timeout)),
     (validateUrlHttpMethod(config, "channels"),
      validateHost(config, "channels"),
      validatePort(config, "channels"),
      validateUri(config,  "channels"),
-     validateUrl(config,  "channels")).mapN((m,h,p,uri,url) ⇒ CerebroSeedChannelsConfig(m,h,p,uri,url)),
+     validateUrl(config,  "channels"),
+     validateTimeout(config, "channels")).mapN((m,h,p,uri,url,timeout) ⇒ CerebroSeedChannelsConfig(m,h,p,uri,url,timeout)),
     (validateUrlHttpMethod(config, "posts"),
      validateHost(config, "posts"),
      validatePort(config, "posts"),
      validateUri(config,  "posts"),
-     validateUrl(config,  "posts")).mapN((m,h,p,uri,url) ⇒ CerebroSeedPostsConfig(m,h,p,uri,url))).mapN((usersCfg, channelsCfg, postsCfg) ⇒ CerebroConfig(usersCfg, channelsCfg, postsCfg))
+     validateUrl(config,  "posts"),
+     validateTimeout(config, "posts")).mapN((m,h,p,uri,url,timeout) ⇒ CerebroSeedPostsConfig(m,h,p,uri,url,timeout))).mapN((usersCfg, channelsCfg, postsCfg) ⇒ CerebroConfig(usersCfg, channelsCfg, postsCfg))
 
 }
 
