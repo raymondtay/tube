@@ -1,20 +1,10 @@
 package nugit.tube.api.channels
 
 import nugit.tube.configuration.CerebroSeedChannelsConfig
+import nugit.tube.api.model._
 import providers.slack.models.SlackChannel
 import org.slf4j.{Logger, LoggerFactory}
 import org.apache.flink.streaming.api.functions.sink._
-
-/* Representation objects received from cerebro
- * and when cerebro is ok:
- * (a) {"received" : <some number>}
- * (b) {"message" : [ ... <json objects> ]} this latter format is driven by
- *     Python Flask (which drives Cerebro) and we haven't decided what to do
- *     with these errors just yet.
- *
- */
-case class CerebroOK(received : Int) extends Serializable
-case class CerebroNOK(message : List[io.circe.JsonObject]) /* As long as we see this structure */ extends Serializable
 
 /**
   * Any failures while transfering to Cerebro would result in a RTE being

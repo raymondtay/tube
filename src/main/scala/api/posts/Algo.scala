@@ -21,7 +21,6 @@ import slacks.core.config._
 import slacks.core.program.SievedMessages
 import providers.slack.models._
 
-protected[posts] case class ChannelPosts(id: String, posts : SievedMessages)
 
 trait PostsAlgos extends Implicits {
 

@@ -1,6 +1,7 @@
 package nugit.tube.api.users
 
 import nugit.tube.configuration.CerebroSeedUsersConfig
+import nugit.tube.api.model.Users
 import providers.slack.models.User
 import org.slf4j.{Logger, LoggerFactory}
 import org.apache.flink.streaming.api.functions.sink._

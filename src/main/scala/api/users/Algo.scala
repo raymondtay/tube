@@ -14,7 +14,6 @@ import cats._, data._, implicits._
 import akka.http.scaladsl.{Http, HttpExt}
 import akka.http.scaladsl.model._
 
-protected[users] case class Users(users : List[User])
 
 trait UsersAlgos {
 
