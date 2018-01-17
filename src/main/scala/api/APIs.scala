@@ -20,6 +20,7 @@ object SlackFunctions extends Implicits {
   import org.atnos.eff.all._
   import org.atnos.eff.syntax.all._
   import org.atnos.eff.syntax.future._
+  import nugit.tube.api.model.ChannelPosts
 
   // Test tokens, do not use in PRODUCTION
   val testToken = SlackAccessToken("xoxp-2169191837-242649061349-267955267123-5e965193f448a1ccbb3bbf6f97083f78", "channel:list" :: Nil)
@@ -87,7 +88,7 @@ object SlackFunctions extends Implicits {
   def getChannelConversationHistory(config: NonEmptyList[ConfigValidation] Either SlackChannelReadConfig[String])
                                    (channelId: String)
                                    (implicit actorSystem : ActorSystem, actorMat : ActorMaterializer, httpService : HttpService)
-                                   : Reader[SlackAccessToken[String], ((String,SievedMessages), List[String])] = Reader { (token: SlackAccessToken[String]) ⇒
+                                   : Reader[SlackAccessToken[String], (ChannelPosts, List[String])] = Reader { (token: SlackAccessToken[String]) ⇒
     import ChannelConversationInterpreter._
     import scala.concurrent._, duration._
     import scala.concurrent.ExecutionContext.Implicits.global
@@ -102,8 +103,8 @@ object SlackFunctions extends Implicits {
             ChannelConversationInterpreter.getChannelConversationHistory(channelId, cfg, httpService).
               runReader(token).
               runWriter.runSequential, timeout)
-        ((channelId, messages), logInfo)
-      case Left(validationErrors)  ⇒ ((channelId, SievedMessages(Nil,Nil,Nil)), validationErrors.toList.map(_.errorMessage))
+        (ChannelPosts(channelId, messages), logInfo)
+      case Left(validationErrors)  ⇒ (ChannelPosts(channelId, SievedMessages(Nil,Nil,Nil)), validationErrors.toList.map(_.errorMessage))
     }
   }
 

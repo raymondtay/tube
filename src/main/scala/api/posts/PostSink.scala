@@ -2,7 +2,7 @@ package nugit.tube.api.posts
 
 import nugit.tube.configuration.CerebroSeedPostsConfig
 import nugit.tube.api.model._
-
+import nugit.tube.api.codec._
 import providers.slack.models.User
 import slacks.core.program.SievedMessages
 
@@ -18,7 +18,7 @@ import org.apache.flink.streaming.api.functions.sink._
   * The implicit parameter here is a channel id that conforms to Slack's
   * channelId format
   */
-class PostSink(cerebroConfig : CerebroSeedPostsConfig) extends RichSinkFunction[((String,SievedMessages), List[String])] {
+class PostSink(cerebroConfig : CerebroSeedPostsConfig) extends RichSinkFunction[(ChannelPosts, List[String])] {
   import cats._, data._, implicits._
   import cats.effect._
   import io.circe._
@@ -37,7 +37,7 @@ class PostSink(cerebroConfig : CerebroSeedPostsConfig) extends RichSinkFunction[
   @transient private[this] var httpClient = Http1Client[IO](config = BlazeClientConfig.defaultConfig.copy(responseHeaderTimeout = cerebroConfig.timeout seconds)).unsafeRunSync
 
   /* Flink calls this when it needs to send */
-  override def invoke(record : ((String,SievedMessages), List[String])) : Unit = {
+  override def invoke(record : (ChannelPosts, List[String])) : Unit = {
     transferToCerebro.run(record._1) match {
       case Left(error) ⇒ throw new RuntimeException(error)
       case Right(result) ⇒
@@ -56,7 +56,7 @@ class PostSink(cerebroConfig : CerebroSeedPostsConfig) extends RichSinkFunction[
     httpClient.shutdownNow()
   }
 
-  private def transferToCerebro : Reader[(String,SievedMessages), Either[String,IO[String]]] = Reader{ (record: (String,SievedMessages)) ⇒
+  private def transferToCerebro : Reader[ChannelPosts, Either[String,IO[String]]] = Reader{ (record: ChannelPosts) ⇒
     Uri.fromString(cerebroConfig.url) match {
       case Left(error) ⇒ "Unable to parse cerebro's configuration".asLeft
       case Right(config) ⇒

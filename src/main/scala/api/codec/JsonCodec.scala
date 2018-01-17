@@ -11,10 +11,14 @@ object JsonCodec {
 
   implicit val slacksPostsEncoder : Encoder[ChannelPosts] = deriveEncoder[ChannelPosts]
   implicit val slackSievedMessagesEncoder : Encoder[SievedMessages] = new Encoder[SievedMessages] {
-    final def apply(a: SievedMessages) : Json = 
-        a.botMessages.asJson.deepMerge(
-        a.userFileShareMessages.asJson).deepMerge(
-        a.userAttachmentMessages.asJson)
+    final def apply(a: SievedMessages) : Json = {
+      ( a.botMessages.asJson.asArray
+        |@| a.userFileShareMessages.asJson.asArray
+        |@| a.userAttachmentMessages.asJson.asArray).map(_ ++ _ ++ _).map(Json.fromValues) match {
+          case Some(mergedResult) ⇒ mergedResult
+          case None ⇒ Json.arr()
+        }
+    }
   }
 
   implicit val ufsEnc : Encoder[UserFileShareMessage] = deriveEncoder[UserFileShareMessage]
