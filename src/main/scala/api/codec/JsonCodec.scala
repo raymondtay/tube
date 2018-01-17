@@ -1,7 +1,7 @@
 package nugit.tube.api.codec
 
 import nugit.tube.api.model._
-import providers.slack.models.{UserFileShareMessage, BotAttachmentMessage, UserAttachmentMessage, JsonCodec ⇒ SlackJsonCodec}
+import providers.slack.models.{UserFile, UserFileShareMessage, BotAttachmentMessage, UserAttachmentMessage, JsonCodec ⇒ SlackJsonCodec}
 import slacks.core.program.SievedMessages
 
 object JsonCodec {
@@ -22,6 +22,7 @@ object JsonCodec {
   }
 
   implicit val ufsEnc : Encoder[UserFileShareMessage] = deriveEncoder[UserFileShareMessage]
+  implicit val ufEnc : Encoder[UserFile] = deriveEncoder[UserFile]
   implicit val botAttachmentEnc : Encoder[BotAttachmentMessage] = deriveEncoder[BotAttachmentMessage]
   implicit val userAttachmentEnc : Encoder[UserAttachmentMessage] = deriveEncoder[UserAttachmentMessage]
  

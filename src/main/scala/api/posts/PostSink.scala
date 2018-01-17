@@ -60,6 +60,7 @@ class PostSink(cerebroConfig : CerebroSeedPostsConfig) extends RichSinkFunction[
     Uri.fromString(cerebroConfig.url) match {
       case Left(error) ⇒ "Unable to parse cerebro's configuration".asLeft
       case Right(config) ⇒
+        import JsonCodec._
         val req = Request[IO](method = POST, uri=config).withBody(record.asJson.noSpaces).putHeaders(`Content-Type`(MediaType.`application/json`))
         if (httpClient == null) { /* necessary because 3rd party libs are not Serializable */
           httpClient = Http1Client[IO](config = BlazeClientConfig.defaultConfig.copy(responseHeaderTimeout = cerebroConfig.timeout seconds)).unsafeRunSync
