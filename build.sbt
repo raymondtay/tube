@@ -20,7 +20,7 @@ val codeCoverageSettings = Seq(
  coverageEnabled := true,
  coverageExcludedPackages := "nugit\\.tube\\.api\\.channels\\..*;nugit\\.tube\\.api\\.users\\..*;nugit\\.tracer\\..*;nugit\\.routes\\..*;nugit\\.tube\\.Main",
  coverageMinimum := 80,
- coverageFailOnMinimum := false
+ coverageFailOnMinimum := true
 )
 
 val slacks = ProjectRef(uri("git://github.com/raymondtay/slacks.git"), "slacks")
