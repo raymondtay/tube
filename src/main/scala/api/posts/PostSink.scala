@@ -82,12 +82,16 @@ class PostSink(cerebroConfig : CerebroSeedPostsConfig) extends RichSinkFunction[
     decode[CerebroOK](jsonString) match {
       case Left(error) ⇒
         decode[CerebroNOK](jsonString) match {
-          case Right(ok) ⇒ "Cerebro was not happy with the input".asLeft[Boolean]
+          case Right(ok) ⇒ 
+            logger.error(s"[NOK] Cerebro returned the following errors on the data: ${ok}")
+            "Cerebro was not happy with the input".asLeft[Boolean]
           case Left(somethingelse) ⇒
-            logger.error(s"Unexpected error: $somethingelse")
+            logger.error(s"[NOK] Unexpected error: $somethingelse")
             "Cerebro returned an unknown error".asLeft[Boolean]
         }
-      case Right(ok) ⇒ true.asRight[String]
+      case Right(ok) ⇒ 
+        logger.info(s"[OK] Cerebro returned: ${ok.received}")
+        true.asRight[String]
     }
   }
 }
