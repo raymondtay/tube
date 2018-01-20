@@ -51,7 +51,11 @@ case object MissingDelayKey extends ConfigValidation {
 }
 
 case object MissingTimeoutKey extends ConfigValidation {
-  def errorMessage = "key: 'timeout' is missing in 'application.conf'."
+  def errorMessage : String = "key: 'timeout' is missing in 'application.conf'."
+}
+
+case object MissingPartitionSizeKey extends ConfigValidation {
+  def errorMessage : String = "key: 'partition.size' is missing in 'application.conf'."
 }
 
 case object MissingAttemptsKey extends ConfigValidation {
@@ -106,7 +110,8 @@ case class CerebroSeedPostsConfig(
   port : Int,
   uri: String,
   url : String,
-  timeout : Long
+  timeout : Long,
+  parSize : Int
   )
 
 //
@@ -153,6 +158,13 @@ sealed trait ConfigValidator extends TimeUnitParser {
   val FailureRateGen = LabelledGeneric[FailureRate]
 
   type ValidationResult[A] = ValidatedNel[ConfigValidation, A]
+
+  def validatePartitionSize(c: Config, namespace : String) : ValidationResult[Int] = {
+    Try{c.getInt(s"tube.cerebro.seed.${namespace}.partition.size")}.toOption match {
+      case Some(parSize) ⇒ parSize.validNel
+      case None ⇒ MissingPartitionSizeKey.invalidNel
+    }
+  }
 
   def validateTimeout(c: Config, namespace : String) : ValidationResult[Long] = {
     Try{c.getLong(s"tube.cerebro.seed.${namespace}.timeout")}.toOption match {
@@ -327,7 +339,8 @@ object ConfigValidator extends ConfigValidator {
      validatePort(config, "posts"),
      validateUri(config,  "posts"),
      validateUrl(config,  "posts"),
-     validateTimeout(config, "posts")).mapN((m,h,p,uri,url,timeout) ⇒ CerebroSeedPostsConfig(m,h,p,uri,url,timeout))).mapN((usersCfg, channelsCfg, postsCfg) ⇒ CerebroConfig(usersCfg, channelsCfg, postsCfg))
+     validateTimeout(config, "posts"),
+     validatePartitionSize(config, "posts")).mapN((m,h,p,uri,url,timeout, par_size) ⇒ CerebroSeedPostsConfig(m,h,p,uri,url,timeout,par_size))).mapN((usersCfg, channelsCfg, postsCfg) ⇒ CerebroConfig(usersCfg, channelsCfg, postsCfg))
 
 }
 

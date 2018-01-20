@@ -24,7 +24,7 @@ import providers.slack.models._
 
 trait PostsAlgos extends Implicits {
 
-  /** 
+  /**
     * Demonstration of retrieving all posts and how this works is:
     * (a) when slack token is invalid or slack is unreachable, an empty
     *     collection of users and logs is returned to caller
@@ -53,8 +53,13 @@ trait PostsAlgos extends Implicits {
       case Nil ⇒ none
       case _   ⇒
         val channelIds : List[String] = channels.map(_.id)
+        /*
         val datum = Applicative[List].map(channelIds)(channelId ⇒ getChannelConversationHistory(slackReadCfg)(channelId).run(token))
         env.fromCollection(datum)
+          .addSink(new PostSink(cerebroConfig))
+        */
+        env.fromParallelCollection(new ChannelIdsSplittableIterator(channelIds)(cerebroConfig))
+          .map(new StatefulPostsRetriever(token)(slackReadCfg))
           .addSink(new PostSink(cerebroConfig))
         env.execute("cerebro-seed-slack-posts")
         /* NOTE: be aware that RTEs can be thrown here */
