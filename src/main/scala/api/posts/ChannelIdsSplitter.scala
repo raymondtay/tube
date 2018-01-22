@@ -55,6 +55,6 @@ class ChannelIdsSplittableIterator(val channelIds: List[String])
   override def hasNext : Boolean = ???
 
   /* Developer does not need to implement this */
-  override def next = ???
+  override def next : String = ???
 }
 
