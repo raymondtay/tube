@@ -4,7 +4,7 @@ import slacks.core.program.SievedMessages
 import providers.slack.models.User
 
 /* This will be reified to JSON. See [[PostSink]] */
-case class ChannelPosts(channel: String, posts: SievedMessages)
+case class ChannelPosts(channel: String, posts: SievedMessages) extends Serializable
 
 /* Representation objects received from cerebro
  * and when cerebro is ok:

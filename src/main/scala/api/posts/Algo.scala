@@ -59,8 +59,8 @@ trait PostsAlgos extends Implicits {
           .addSink(new PostSink(cerebroConfig))
         */
         env.fromParallelCollection(new ChannelIdsSplittableIterator(channelIds)(cerebroConfig))
-          .map(new StatefulPostsRetriever(token)(slackReadCfg))
-          .addSink(new PostSink(cerebroConfig))
+          .map(new StatefulPostsRetriever(token)(slackReadCfg)).name("channel-posts-retriever")
+          .addSink(new PostSink(cerebroConfig)).name("channel-posts-sink")
         env.execute("cerebro-seed-slack-posts")
         /* NOTE: be aware that RTEs can be thrown here */
         none

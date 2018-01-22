@@ -43,7 +43,7 @@ class StatefulPostsRetriever(token: SlackAccessToken[String])
   private var restored = false
   private var atLeastOneSnapshotComplete = false
 
-  @transient private[this] val logger = LoggerFactory.getLogger(classOf[StatefulPostsRetriever])
+  @transient private[this] var logger = LoggerFactory.getLogger(classOf[StatefulPostsRetriever])
 
   override def notifyCheckpointComplete(checkpointId: Long): Unit = {
     atLeastOneSnapshotComplete = true
@@ -66,16 +66,20 @@ class StatefulPostsRetriever(token: SlackAccessToken[String])
 
   /* Members declared in org.apache.flink.api.common.functions.MapFunction */
   override def map(channelId: String): (ChannelPosts, List[String]) = {
+    if (logger == null) logger = LoggerFactory.getLogger(classOf[StatefulPostsRetriever])
+
     val snapshotSleepTime = 100
     (atLeastOneSnapshotComplete, restored) match {
       case (false, _) =>
+        println     ("[map] Sleeping 100 ms for snapshot to complete.")
         logger.debug("[map] Sleeping 100 ms for snapshot to complete.")
         Thread.sleep(snapshotSleepTime)
       case (true, true) =>
+        println     ("[map] Recovered at least 1 snapshot and state is restored ")
         logger.debug("[map] Recovered at least 1 snapshot and state is restored ")
       case (true, false) =>
+        println     ("[map] Recovered at least 1 snapshot but state is not restored")
         logger.debug("[map] Recovered at least 1 snapshot but state is not restored")
-        throw new RuntimeException("Intended failure, to trigger restore")
     }
     val (posts, logs) = getChannelConversationHistory(slackReadCfg)(channelId).run(token)
     this.channelId = channelId

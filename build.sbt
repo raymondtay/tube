@@ -40,4 +40,5 @@ run in Compile := Defaults.runTask(fullClasspath in Compile,
                                   ).evaluated
 
 // exclude Scala library from assembly
+test in assembly := {} /* tests should have been run during CI/CD */
 assemblyOption in assembly := (assemblyOption in assembly).value.copy(includeScala = false)

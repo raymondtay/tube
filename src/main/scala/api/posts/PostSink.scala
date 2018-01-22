@@ -33,27 +33,34 @@ class PostSink(cerebroConfig : CerebroSeedPostsConfig) extends RichSinkFunction[
   import org.http4s.headers._
   import org.http4s.client.blaze._
 
-  @transient implicit val logger = LoggerFactory.getLogger(classOf[PostSink])
+  @transient var logger = LoggerFactory.getLogger(classOf[PostSink])
   @transient private[this] var httpClient = Http1Client[IO](config = BlazeClientConfig.defaultConfig.copy(responseHeaderTimeout = cerebroConfig.timeout seconds)).unsafeRunSync
+
+  /* Closes the http client, and pool as well */
+  override def close() : Unit = {
+    httpClient.shutdownNow()
+  }
 
   /* Flink calls this when it needs to send */
   override def invoke(record : (ChannelPosts, List[String])) : Unit = {
+    if (logger == null) {
+      logger = LoggerFactory.getLogger(classOf[PostSink])
+    }
+
     transferToCerebro.run(record._1) match {
       case Left(error) ⇒ throw new RuntimeException(error)
       case Right(result) ⇒
         parseResponse(result).bimap((error:String) ⇒ onError(error), (result: Boolean) ⇒ onSuccess(result))
     }
-    httpClient.shutdownNow()
   }
 
   private def onError(error : String) {
     logger.error(s"Error detected while sending data to Cerebro: $error")
-    httpClient.shutdownNow()
     throw new RuntimeException("Error detected while xfer to Cerebro")
   }
 
   private def onSuccess(result: Boolean) {
-    httpClient.shutdownNow()
+    logger.info("Data transferred to cerebro.")
   }
 
   private def transferToCerebro : Reader[ChannelPosts, Either[String,IO[String]]] = Reader{ (record: ChannelPosts) ⇒
@@ -83,13 +90,16 @@ class PostSink(cerebroConfig : CerebroSeedPostsConfig) extends RichSinkFunction[
       case Left(error) ⇒
         decode[CerebroNOK](jsonString) match {
           case Right(ok) ⇒ 
+            println(s"[NOK] Cerebro returned the following errors on the data: ${ok}")
             logger.error(s"[NOK] Cerebro returned the following errors on the data: ${ok}")
             "Cerebro was not happy with the input".asLeft[Boolean]
           case Left(somethingelse) ⇒
+            println(s"[NOK] Unexpected error: $somethingelse")
             logger.error(s"[NOK] Unexpected error: $somethingelse")
             "Cerebro returned an unknown error".asLeft[Boolean]
         }
       case Right(ok) ⇒ 
+        println(s"[OK] Cerebro returned: ${ok.received}")
         logger.info(s"[OK] Cerebro returned: ${ok.received}")
         true.asRight[String]
     }
