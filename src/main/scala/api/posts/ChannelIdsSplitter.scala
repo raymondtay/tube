@@ -35,8 +35,9 @@ class ChannelIdsSplittableIterator(val channelIds: List[String])
     * by the last iterator in that container.
     */
   override def split(numberOfSplits : Int) : Array[java.util.Iterator[String]] = {
-    if (channelIds.size < numberOfSplits)
+    if (channelIds.size < numberOfSplits) {
       throw new RuntimeException(s"You cannot have more splits (i.e. $numberOfSplits) than there is data (i.e. ${channelIds.size}). Reduce the parallelism for this job")
+    }
 
     val sizeOfPartition = (channelIds.size / numberOfSplits)
     if ((channelIds.size % numberOfSplits) == 0) {

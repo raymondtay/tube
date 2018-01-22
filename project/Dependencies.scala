@@ -33,7 +33,10 @@ object Dependencies {
   val akkaHttp       = "com.typesafe.akka" %% "akka-http" % akkaHttpVersion
   val akkaHttpTest   = "com.typesafe.akka" %% "akka-http-testkit" %  akkaHttpVersion
   val scalaCheckTest = "org.scalacheck" %% "scalacheck" % scalaCheckVersion
-  val specs2Test     = "org.specs2" %% "specs2-core" % specs2Version
+  val specs2Test     = Seq(
+    "org.specs2" %% "specs2-matcher-extra" % specs2Version,
+    "org.specs2" %% "specs2-core" % specs2Version
+  )
   val specs2ScalaCheckTest = "org.specs2" %% "specs2-scalacheck" % specs2Version
   val akkaStream           = "com.typesafe.akka" %% "akka-stream" % akkaVersion
   val akkaActors           = "com.typesafe.akka" %% "akka-actor"  % akkaVersion
@@ -67,6 +70,6 @@ object Dependencies {
   // Grouping the libraries to logical units
   val generalLibs = Seq(cats, akkaHttp, akkaStream, akkaActors, shapeless, fastparse, scopt) ++ logger ++ circeJson ++ openTracing ++ flinkLibs ++ http4s
 
-  val testLibs = Seq(akkaHttpTest, specs2ScalaCheckTest, specs2Test, scalaTest, flinkTest).map( _ % Test )
+  val testLibs = Seq(akkaHttpTest, specs2ScalaCheckTest, scalaTest, flinkTest).map( _ % Test ) ++ circeJson.map(_ % Test) ++ specs2Test.map(_ % Test)
 
 }

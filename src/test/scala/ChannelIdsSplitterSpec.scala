@@ -10,18 +10,19 @@ import slacks.core.config.Config
 import scala.collection.JavaConverters._
 
 object ChannelIdsData {
+  val size = 10
+  val step = 1
+  def channelIdsLTsize : Gen[(List[String], Int)] = for {
+    xs <- listOfN[String](size, alphaStr suchThat (!_.isEmpty))
+  } yield (xs, xs.size + step)
 
-  val channelIdsLTsize = for {
-    xs <- listOfN[String](10, alphaStr suchThat (!_.isEmpty))
-  } yield (xs, xs.size + 1)
-
-  val channelIdsEQsize = for {
-    xs <- listOfN[String](10, alphaStr suchThat (!_.isEmpty))
+  def channelIdsEQsize : Gen[(List[String], Int)] = for {
+    xs <- listOfN[String](size, alphaStr suchThat (!_.isEmpty))
   } yield (xs, xs.size)
 
-  val channelIdsGTsize = for {
-    xs <- listOfN[String](10, alphaStr suchThat (!_.isEmpty))
-    } yield (xs, xs.size - 1)
+  def channelIdsGTsize : Gen[(List[String], Int)] = for {
+    xs <- listOfN[String](size, alphaStr suchThat (!_.isEmpty))
+  } yield (xs, xs.size - step)
 
   implicit val arbGenGoodCfg1 = Arbitrary(channelIdsLTsize)
   implicit val arbGenGoodCfg2 = Arbitrary(channelIdsEQsize)

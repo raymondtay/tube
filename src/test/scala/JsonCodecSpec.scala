@@ -13,18 +13,22 @@ import Gen.alphaStr
 import Prop.{forAll, throws, AnyOperators}
 
 import slacks.core.config.Config
+import slacks.core.program.SievedMessages
 import scala.collection.JavaConverters._
 import providers.slack.models.{Reaction, Reply, BotAttachment, UserFile, UserFileComment, UserFileShareMessage, BotAttachmentMessage, UserAttachmentMessage, JsonCodec ⇒ SlackJsonCodec}
+
+import nugit.tube.api.model.ChannelPosts
 
 /**
   * The APIs that are like containerOf, listOf (its cousins and derivatives) are suffering from this:
   * https://github.com/rickynils/scalacheck/issues/89
   *
-  * Workaround is not to use container generators.
+  * A possible work around:
+  * https://github.com/rickynils/scalacheck/pull/370
   */
 object JsonCodecGenerators {
 
-  def genUserFile = for {
+  def genUserFile : Gen[UserFile] = for {
     filetype <- arbitrary[String].suchThat(!_.isEmpty)
     id <- arbitrary[String].suchThat(!_.isEmpty)
     title <- arbitrary[String].suchThat(!_.isEmpty)
@@ -39,13 +43,13 @@ object JsonCodecGenerators {
     mode <- arbitrary[String].suchThat(!_.isEmpty)
   } yield UserFile(filetype, id, title, url_private, external_type, timestamp, pretty_type, name, mimetype, permalink, created, mode)
 
-  def genUserFileComment = for {
+  def genUserFileComment : Gen[UserFileComment] = for {
     id <- arbitrary[String].suchThat(!_.isEmpty)
     timestamp <- arbitrary[Long]
     user <- arbitrary[String].suchThat(!_.isEmpty)
   } yield UserFileComment(id, timestamp, user)
 
-  def genUserFileShareMessage = for {
+  def genUserFileShareMessage : Gen[UserFileShareMessage] = for {
     tpe <- arbitrary[String].suchThat(!_.isEmpty)
     subtype <- arbitrary[String].suchThat(!_.isEmpty)
     text <- arbitrary[String].suchThat(!_.isEmpty)
@@ -57,7 +61,7 @@ object JsonCodecGenerators {
     ts <- arbitrary[String].suchThat(!_.isEmpty)
   } yield UserFileShareMessage(tpe, subtype, text, file, fileComment1 ::fileComment2 ::Nil, user, bot_id, ts)
 
-  def genBotAttachment = for {
+  def genBotAttachment : Gen[BotAttachment] = for {
     fallback <- arbitrary[String].suchThat(!_.isEmpty)
     text <- arbitrary[String].suchThat(!_.isEmpty)
     pretext <- arbitrary[String].suchThat(!_.isEmpty)
@@ -68,18 +72,18 @@ object JsonCodecGenerators {
   } yield BotAttachment(fallback, text, pretext, id, color, mrkdwn_in1::mrkdwn_in2::Nil)
 
 
-  def genReaction = for {
+  def genReaction : Gen[Reaction] = for {
     name <- arbitrary[String].suchThat(!_.isEmpty)
     user1 <- alphaStr.suchThat(!_.isEmpty)
     user2 <- alphaStr.suchThat(!_.isEmpty)
   } yield Reaction(name, user1::user2::Nil)
 
-  def genReply = for {
+  def genReply : Gen[Reply] = for {
     ts <- arbitrary[String].suchThat(!_.isEmpty)
     user <- arbitrary[String].suchThat(!_.isEmpty)
   } yield Reply(ts, user)
 
-  def genBotAttachmentMessage = for {
+  def genBotAttachmentMessage : Gen[BotAttachmentMessage] = for {
     tpe <- arbitrary[String].suchThat(!_.isEmpty)
     user <- arbitrary[String].suchThat(!_.isEmpty)
     bot_id <- arbitrary[String].suchThat(!_.isEmpty)
@@ -93,7 +97,7 @@ object JsonCodecGenerators {
     ts <- arbitrary[String].suchThat(!_.isEmpty)
   } yield BotAttachmentMessage(tpe, user, bot_id, text, botAtt1::botAtt2::Nil, ts, reac1::reac2::Nil, reply1::reply2::Nil)
 
-  def genUserAttachmentMessage = for {
+  def genUserAttachmentMessage : Gen[UserAttachmentMessage] = for {
     tpe <- arbitrary[String].suchThat(!_.isEmpty)
     user <- arbitrary[String].suchThat(!_.isEmpty)
     text <- arbitrary[String].suchThat(!_.isEmpty)
@@ -104,10 +108,22 @@ object JsonCodecGenerators {
     reply2 <- genReply
   } yield UserAttachmentMessage(tpe, user, text, List(Json.arr(Json.fromString("test"))), ts, reac1::reac2::Nil, reply1::reply2::Nil)
 
+  def genSievedMessages : Gen[SievedMessages] = for {
+    xs <- genBotAttachmentMessage
+    ys <- genUserAttachmentMessage
+    zs <- genUserFileShareMessage
+  } yield SievedMessages(xs::Nil, ys::Nil, zs::Nil)
+
+  def genChannelPostsMessage : Gen[ChannelPosts] = for {
+    channelId <- arbitrary[String].suchThat(!_.isEmpty)
+    sievedMsgs <- genSievedMessages
+  } yield ChannelPosts(channelId, sievedMsgs)
+
   implicit val arbGenUserFile = Arbitrary(genUserFile)
   implicit val arbGenUserFileShareMessage = Arbitrary(genUserFileShareMessage)
   implicit val arbGenBotAttachmentMessage = Arbitrary(genBotAttachmentMessage)
   implicit val arbGenUserAttachmentMessage = Arbitrary(genUserAttachmentMessage)
+  implicit val arbGenChannelPostsMessage = Arbitrary(genChannelPostsMessage)
 }
 
 class JsonCodecSpecs extends mutable.Specification with ScalaCheck {override def is = s2"""
@@ -115,6 +131,7 @@ class JsonCodecSpecs extends mutable.Specification with ScalaCheck {override def
   Generate 'UserFileShareMessage' object as valid json $genUserFileShareMessageJson
   Generate 'UserAttachmentMessage' object as valid json $genUserAttachmentMessageJson
   Generate 'BotAttachmentMessage' object as valid json $genBotAttachmentMessageJson
+  Generate 'ChannelPosts' object as valid json $genChannelPostsJson
   """
 
   import SlackJsonCodec._
@@ -144,6 +161,13 @@ class JsonCodecSpecs extends mutable.Specification with ScalaCheck {override def
     import JsonCodecGenerators.arbGenUserAttachmentMessage
     prop { (msg: UserAttachmentMessage) ⇒
       msg.asJson(JsonCodec.userAttachmentEnc) must not beNull
+    }.set(minTestsOk = 1)
+  }
+
+  def genChannelPostsJson = {
+    import JsonCodecGenerators.arbGenChannelPostsMessage
+    prop { (msg: ChannelPosts) ⇒
+      msg.asJson(JsonCodec.slacksPostsEncoder) must not beNull
     }.set(minTestsOk = 1)
   }
 
