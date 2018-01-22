@@ -1,0 +1,77 @@
+package nugit.tube.api.posts
+
+import org.specs2._
+import org.specs2.specification.AfterAll
+import org.scalacheck._
+import Arbitrary._
+import Gen.{alphaStr, sequence, nonEmptyContainerOf, choose, pick, mapOf, listOfN, oneOf}
+import Prop.{forAll, throws, AnyOperators}
+import slacks.core.config.Config
+import scala.collection.JavaConverters._
+
+object ChannelIdsData {
+
+  val channelIdsLTsize = for {
+    xs <- listOfN[String](10, alphaStr suchThat (!_.isEmpty))
+  } yield (xs, xs.size + 1)
+
+  val channelIdsEQsize = for {
+    xs <- listOfN[String](10, alphaStr suchThat (!_.isEmpty))
+  } yield (xs, xs.size)
+
+  val channelIdsGTsize = for {
+    xs <- listOfN[String](10, alphaStr suchThat (!_.isEmpty))
+    } yield (xs, xs.size - 1)
+
+  implicit val arbGenGoodCfg1 = Arbitrary(channelIdsLTsize)
+  implicit val arbGenGoodCfg2 = Arbitrary(channelIdsEQsize)
+  implicit val arbGenGoodCfg3 = Arbitrary(channelIdsGTsize)
+}
+
+class ChannelIdsSplitterSpecs extends mutable.Specification with ScalaCheck {override def is = s2"""
+  Catch RTE when data is less than requested splits $whenDataLTSplits
+  When data is partitioned perfectly by the numberOfSplits $whenSplitsEQData
+  When data is NOT partitioned perfectly by the numberOfSplits $whenSplitsGTData
+  """
+
+  def whenDataLTSplits = {
+    import ChannelIdsData.arbGenGoodCfg1
+    prop { (pair: (scala.collection.immutable.List[String],Int)) ⇒
+      (nugit.tube.configuration.ConfigValidator.loadCerebroConfig(Config.config).toOption : @unchecked) match {
+        case Some(cfg) ⇒
+          val splitter = new ChannelIdsSplittableIterator(pair._1)(cfg.seedPostsCfg)
+          val numberOfSplits = pair._2
+          splitter.split(numberOfSplits) must throwA[RuntimeException]
+      }
+    }.set(minTestsOk = minimumNumberOfTests, workers = 1)
+  }
+
+  def whenSplitsEQData = {
+    import ChannelIdsData.arbGenGoodCfg2
+    prop { (pair: (scala.collection.immutable.List[String],Int)) ⇒
+      (nugit.tube.configuration.ConfigValidator.loadCerebroConfig(Config.config).toOption : @unchecked) match {
+        case Some(cfg) ⇒
+          val splitter = new ChannelIdsSplittableIterator(pair._1)(cfg.seedPostsCfg)
+          val numberOfSplits = pair._2
+          splitter.split(numberOfSplits).size must be_==(numberOfSplits) 
+      }
+    }.set(minTestsOk = minimumNumberOfTests, workers = 1)
+  }
+
+  def whenSplitsGTData = {
+    import ChannelIdsData.arbGenGoodCfg3
+    prop { (pair: (scala.collection.immutable.List[String],Int)) ⇒
+      (nugit.tube.configuration.ConfigValidator.loadCerebroConfig(Config.config).toOption : @unchecked) match {
+        case Some(cfg) ⇒
+          val splitter = new ChannelIdsSplittableIterator(pair._1)(cfg.seedPostsCfg)
+          val numberOfSplits = pair._2
+          val iterators = splitter.split(numberOfSplits).toList.map(_.asScala.toList)
+          iterators.size must be_==(numberOfSplits)
+          iterators.reverse.head.size > iterators.head.size
+      }
+    }.set(minTestsOk = minimumNumberOfTests, workers = 1)
+  }
+
+  val minimumNumberOfTests = 100
+}
+

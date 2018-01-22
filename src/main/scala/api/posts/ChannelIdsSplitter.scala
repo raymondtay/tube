@@ -20,10 +20,35 @@ import slacks.core.config._
  */
 class ChannelIdsSplittableIterator(val channelIds: List[String])
                                   (cerebroPostsConfig: CerebroSeedPostsConfig)extends SplittableIterator[String] {
+  if (channelIds.isEmpty) throw new RuntimeException("Expecting a non-empty container")
+
   private[this] val partition : Int = cerebroPostsConfig.parSize
 
   override def getMaximumNumberOfSplits() : Int = partition
-  override def split(numberOfSplits : Int) : Array[java.util.Iterator[String]] = channelIds.grouped(partition).toArray.map(_.iterator.asJava)
+
+  /**
+    * The head of the splitted iterators would bear the burden of carrying the
+    * extra load. If there is more splits than there is data, we throw a RTE
+    * because it means there's a logical error since [[SplittableIterator]] is
+    * likely defined by the developer otherwise we check whether the splits
+    * requested partitions the data perfectly; if not, the burden is shouldered
+    * by the last iterator in that container.
+    */
+  override def split(numberOfSplits : Int) : Array[java.util.Iterator[String]] = {
+    if (channelIds.size < numberOfSplits)
+      throw new RuntimeException(s"You cannot have more splits (i.e. $numberOfSplits) than there is data (i.e. ${channelIds.size}). Reduce the parallelism for this job")
+
+    val sizeOfPartition = (channelIds.size / numberOfSplits)
+    if ((channelIds.size % numberOfSplits) == 0) {
+      channelIds.sliding(sizeOfPartition,sizeOfPartition).toArray.map(_.iterator.asJava)
+    } else {
+      val t = channelIds.sliding(sizeOfPartition,sizeOfPartition).toArray
+      val last = t.tail.reverse.head
+      val head = t.head
+      val rem = t.tail.reverse.tail
+      (rem :+ (head ++ last)).map(_.iterator.asJava).toArray
+    }
+  }
 
   /* Developer does not need to implement this */
   override def hasNext : Boolean = ???
