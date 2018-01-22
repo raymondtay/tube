@@ -27,7 +27,7 @@ class ChannelIdsSplittableIterator(val channelIds: List[String])
   override def getMaximumNumberOfSplits() : Int = partition
 
   /**
-    * The head of the splitted iterators would bear the burden of carrying the
+    * The last of the splitted iterators would bear the burden of carrying the
     * extra load. If there is more splits than there is data, we throw a RTE
     * because it means there's a logical error since [[SplittableIterator]] is
     * likely defined by the developer otherwise we check whether the splits
