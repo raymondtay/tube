@@ -36,8 +36,8 @@ import providers.slack.models.SlackAccessToken
  */
 class StatefulPostsRetriever(token: SlackAccessToken[String])
                             (slackReadCfg: NonEmptyList[ConfigValidation] Either SlackChannelReadConfig[String])
-                            (implicit actorSystem : ActorSystem, actorMaterializer : ActorMaterializer)
-                            extends MapFunction[String, (ChannelPosts,List[String])] with ListCheckpointed[StatefulPostsRetriever] with CheckpointListener {
+                            //(implicit actorSystem : ActorSystem, actorMaterializer : ActorMaterializer)
+                            extends RichMapFunction[String, (ChannelPosts,List[String])] with ListCheckpointed[StatefulPostsRetriever] with CheckpointListener {
 
   private var channelId : String = _
   private var restored = false
@@ -51,6 +51,8 @@ class StatefulPostsRetriever(token: SlackAccessToken[String])
 
   /* Members declared in org.apache.flink.streaming.api.checkpoint.ListCheckpointed */
   override def restoreState(state: java.util.List[StatefulPostsRetriever]): Unit = {
+    if (logger == null) logger = LoggerFactory.getLogger(classOf[StatefulPostsRetriever])
+
     if (state.isEmpty || state.size() > 1) throw new RuntimeException("Unexpected recovered state size " + state.size())
     restored = true
     val s = state.get(0)
@@ -60,6 +62,8 @@ class StatefulPostsRetriever(token: SlackAccessToken[String])
   }
 
   override def snapshotState(checkpointId: Long, timestamp: Long): java.util.List[StatefulPostsRetriever] = {
+    if (logger == null) logger = LoggerFactory.getLogger(classOf[StatefulPostsRetriever])
+
     logger.debug(s"[snapshotState] Collecting current state.")
     java.util.Collections.singletonList(this)
   }

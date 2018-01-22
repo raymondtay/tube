@@ -87,25 +87,30 @@ object SlackFunctions extends Implicits {
     */
   def getChannelConversationHistory(config: NonEmptyList[ConfigValidation] Either SlackChannelReadConfig[String])
                                    (channelId: String)
-                                   (implicit actorSystem : ActorSystem, actorMat : ActorMaterializer, httpService : HttpService)
                                    : Reader[SlackAccessToken[String], (ChannelPosts, List[String])] = Reader { (token: SlackAccessToken[String]) ⇒
     import ChannelConversationInterpreter._
     import scala.concurrent._, duration._
     import scala.concurrent.ExecutionContext.Implicits.global
 
     implicit val scheduler = ExecutorServices.schedulerFromGlobalExecutionContext
+    implicit val actorSystem = ActorSystem("ChannelConversationHistoryActorSystem")
+    implicit val actorMat    = ActorMaterializer()
     import slacks.core.config.Config
-    config match {
-      case Right(cfg) ⇒
-        val timeout : Duration = cfg.timeout seconds
-        val (messages, logInfo) =
-          Await.result(
-            ChannelConversationInterpreter.getChannelConversationHistory(channelId, cfg, httpService).
-              runReader(token).
-              runWriter.runSequential, timeout)
-        (ChannelPosts(channelId, messages), logInfo)
-      case Left(validationErrors)  ⇒ (ChannelPosts(channelId, SievedMessages(Nil,Nil,Nil)), validationErrors.toList.map(_.errorMessage))
-    }
+    val datum =
+      config match {
+        case Right(cfg) ⇒
+          val timeout : Duration = cfg.timeout seconds
+          val (messages, logInfo) =
+            Await.result(
+              ChannelConversationInterpreter.getChannelConversationHistory(channelId, cfg, httpService).
+                runReader(token).
+                runWriter.runSequential, timeout)
+          (ChannelPosts(channelId, messages), logInfo)
+        case Left(validationErrors)  ⇒ (ChannelPosts(channelId, SievedMessages(Nil,Nil,Nil)), validationErrors.toList.map(_.errorMessage))
+      }
+    actorMat.shutdown()
+    actorSystem.shutdown()
+    datum
   }
 
   /**
