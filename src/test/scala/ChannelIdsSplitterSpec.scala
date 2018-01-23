@@ -4,7 +4,7 @@ import org.specs2._
 import org.specs2.specification.AfterAll
 import org.scalacheck._
 import Arbitrary._
-import Gen.{alphaStr, sequence, nonEmptyContainerOf, choose, pick, mapOf, listOfN, oneOf}
+import Gen.{alphaStr, fail, sequence, nonEmptyContainerOf, choose, pick, mapOf, listOfN, oneOf}
 import Prop.{forAll, throws, AnyOperators}
 import slacks.core.config.Config
 import scala.collection.JavaConverters._
@@ -30,10 +30,27 @@ object ChannelIdsData {
 }
 
 class ChannelIdsSplitterSpecs extends mutable.Specification with ScalaCheck {override def is = s2"""
+  Number of spilts must be as in the configuration $splitEQconfiguration
+  Catch RTE when empty containers are passed-in. $whenDataIsEmpty
   Catch RTE when data is less than requested splits $whenDataLTSplits
   When data is partitioned perfectly by the numberOfSplits $whenSplitsEQData
   When data is NOT partitioned perfectly by the numberOfSplits $whenSplitsGTData
   """
+
+  def splitEQconfiguration = {
+    (nugit.tube.configuration.ConfigValidator.loadCerebroConfig(Config.config).toOption : @unchecked) match {
+      case Some(cfg) ⇒
+        val x = new ChannelIdsSplittableIterator("fake-channel-id"::Nil)(cfg.seedPostsCfg)
+        x.getMaximumNumberOfSplits() must be_==(cfg.seedPostsCfg.parSize)
+    }
+  }
+
+  def whenDataIsEmpty = {
+    (nugit.tube.configuration.ConfigValidator.loadCerebroConfig(Config.config).toOption : @unchecked) match {
+      case Some(cfg) ⇒
+        new ChannelIdsSplittableIterator(Nil)(cfg.seedPostsCfg) must throwA[RuntimeException]
+    }
+  }
 
   def whenDataLTSplits = {
     import ChannelIdsData.arbGenGoodCfg1
