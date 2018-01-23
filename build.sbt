@@ -17,7 +17,6 @@ val commonSettings = Seq(
 
 // mask out the nugit.tracer.*, nugit.routes.* and nugit.tube.*
 val codeCoverageSettings = Seq(
- coverageEnabled := true,
  coverageExcludedPackages := "nugit\\.tube\\.api\\.channels\\..*;nugit\\.tube\\.api\\.users\\..*;nugit\\.tracer\\..*;nugit\\.routes\\..*;nugit\\.tube\\.Main",
  coverageMinimum := 80,
  coverageFailOnMinimum := false

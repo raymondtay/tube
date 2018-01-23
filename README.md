@@ -35,28 +35,52 @@
 
 [![CircleCI](https://circleci.com/gh/nugit/tube/tree/master.svg?style=svg)](https://circleci.com/gh/nugit/tube/tree/master)
 
-The pipeline for Slack 
+The pipeline for Slack
 
 # QuickStart
 
-This package is deployed against [Apache Flink](http://flink.apache.org) and is
-tested against version `1.3.2` though it is best to run against `1.4` as
-there's source compatibility throughout.
+This package is deployed against [Apache Flink](http://flink.apache.org) and is tested against version `1.4`.
 
-Note: You need to have Apache Flink running in the environment prior 
+*Note*: You need to have Apache Flink running in the environment prior. This
+README assumes that you have a Apache Flink standalone cluster (i.e. 1 master
+node with _n_ slave nodes.)
 
-- Verify that Flink is running (Flink's Web UI is hosted on `http://localhost:8081`)
-- Run `sbt assembly` (this should give you a _fat_ jar file e.g.
-  `tube-assembly-0.1-SNAPSHOT.jar`)
-- Take that _fat_ jar file and run it against the Flink e.g. `bin/flink run
-  tube-assembly-0.1-SNAPSHOT.jar`
+- Verify that Flink is running (Flink's Web UI is hosted on `http://10.142.0.2:8081`)
+- Run `sbt coverageOff assembly` (this should give you a _fat_ jar file e.g.  `tube-assembly-0.1-SNAPSHOT.jar`)
+-- In CI/CD environments, this would be automated.
+- Take that _fat_ jar file and run it against the Flink e.g. `bin/flink run tube-assembly-0.1-SNAPSHOT.jar`
+
+## Seed Users
+
+`tube` uses `slacks` to extract the total number of users from slack via its
+REST APIs. To run it, do the following:
+
+- `cd $HOME/flink-1.4.0`
+- `./bin/flink run tube-assembly-0.1-SNAPSHOT.jar -X seed_users -S {none|fixed-delay|failure-rate}`
+
+## Seed Channels
+
+`tube` uses `slacks` to extract the total number of channels from slack via its
+REST APIs. To run it, do the following:
+
+- `cd $HOME/flink-1.4.0`
+- `./bin/flink run tube-assembly-0.1-SNAPSHOT.jar -X seed_channels -S {none|fixed-delay|failure-rate}`
+
+## Seed Channel Posts
+
+`tube` uses `slacks` to extract all posts from all detected channels (potentially, in parallel) from slack via its
+REST APIs. To run it, do the following:
+
+- `cd $HOME/flink-1.4.0`
+- `./bin/flink run tube-assembly-0.1-SNAPSHOT.jar -P {1|2|X number of parallel jobs} -X seed_posts -S {none|fixed-delay|failure-rate}`
 
 Here is what you might get when you successfully ran it:
 ![Screen to Tube running against Flink](./images/tube_on_flink.png)
 
 # Developers
 
-Developers should not check in any IDE-related files.
+Developers should not check in any IDE-related files. If the developer is
+interested in testing, you can run a command like this : `sbt coverageOn clean test`
 
 ## Managing Dependencies
 
@@ -75,7 +99,7 @@ Library name | Current version | Comments
 `Eff`        | 5.0.0-RC1-20180101142835-0e4b73e| Bumped from `4.5.0` to support latest `Cats`
 `Circe`      | 0.9.0 | Bumped from `0.8.0` to support latest `Cats`
 
-## Code coverage 
+## Code coverage
 
 `tube` uses code coverage via [scoverage](https://github.com/scoverage/sbt-scoverage) because we believe we don't deliver shit to users.
 
@@ -92,7 +116,7 @@ sbt clean coverage test
 
 ## Scala Style
 
-`tube` uses the the sbt plugin [Scalastyle](http://www.scalastyle.org/sbt.html) for conformance of style. 
+`tube` uses the the sbt plugin [Scalastyle](http://www.scalastyle.org/sbt.html) for conformance of style.
 
 ### Usage
 
