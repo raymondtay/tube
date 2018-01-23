@@ -1,13 +1,8 @@
 package nugit.tube.api.posts
 
+import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.functions.source._
-import org.apache.flink.annotation.PublicEvolving
-import org.apache.flink.api.common.state.{ListState,ListStateDescriptor}
-import org.apache.flink.api.common.typeutils.base.StringSerializer
-import org.apache.flink.runtime.state.FunctionInitializationContext
-import org.apache.flink.runtime.state.FunctionSnapshotContext
 import org.apache.flink.streaming.api.checkpoint.{CheckpointedFunction, ListCheckpointed}
-import org.apache.flink.util.{Preconditions, SplittableIterator}
 import org.apache.flink.api.common.functions._
 import org.apache.flink.runtime.state._
 
@@ -36,14 +31,17 @@ import providers.slack.models.SlackAccessToken
  */
 class StatefulPostsRetriever(token: SlackAccessToken[String])
                             (slackReadCfg: NonEmptyList[ConfigValidation] Either SlackChannelReadConfig[String])
-                            //(implicit actorSystem : ActorSystem, actorMaterializer : ActorMaterializer)
                             extends RichMapFunction[String, (ChannelPosts,List[String])] with ListCheckpointed[StatefulPostsRetriever] with CheckpointListener {
 
   private var channelId : String = _
   private var restored = false
   private var atLeastOneSnapshotComplete = false
 
-  @transient private[this] var logger = LoggerFactory.getLogger(classOf[StatefulPostsRetriever])
+  @transient private[this] var logger : Logger = _
+
+  override def open(params: Configuration) : Unit = {
+    logger = LoggerFactory.getLogger(classOf[StatefulPostsRetriever])
+  }
 
   override def notifyCheckpointComplete(checkpointId: Long): Unit = {
     atLeastOneSnapshotComplete = true
@@ -51,8 +49,6 @@ class StatefulPostsRetriever(token: SlackAccessToken[String])
 
   /* Members declared in org.apache.flink.streaming.api.checkpoint.ListCheckpointed */
   override def restoreState(state: java.util.List[StatefulPostsRetriever]): Unit = {
-    if (logger == null) logger = LoggerFactory.getLogger(classOf[StatefulPostsRetriever])
-
     if (state.isEmpty || state.size() > 1) throw new RuntimeException("Unexpected recovered state size " + state.size())
     restored = true
     val s = state.get(0)
@@ -62,16 +58,12 @@ class StatefulPostsRetriever(token: SlackAccessToken[String])
   }
 
   override def snapshotState(checkpointId: Long, timestamp: Long): java.util.List[StatefulPostsRetriever] = {
-    if (logger == null) logger = LoggerFactory.getLogger(classOf[StatefulPostsRetriever])
-
     logger.debug(s"[snapshotState] Collecting current state.")
     java.util.Collections.singletonList(this)
   }
 
   /* Members declared in org.apache.flink.api.common.functions.MapFunction */
   override def map(channelId: String): (ChannelPosts, List[String]) = {
-    if (logger == null) logger = LoggerFactory.getLogger(classOf[StatefulPostsRetriever])
-
     val snapshotSleepTime = 100
     (atLeastOneSnapshotComplete, restored) match {
       case (false, _) =>

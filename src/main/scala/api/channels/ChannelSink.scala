@@ -3,7 +3,11 @@ package nugit.tube.api.channels
 import nugit.tube.configuration.CerebroSeedChannelsConfig
 import nugit.tube.api.model._
 import providers.slack.models.SlackChannel
+import nugit.tube.api.codec._
+import nugit.tube.api.model._
+
 import org.slf4j.{Logger, LoggerFactory}
+import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.functions.sink._
 
 /**
@@ -26,8 +30,13 @@ class ChannelSink(cerebroConfig : CerebroSeedChannelsConfig) extends RichSinkFun
   import org.http4s.headers._
   import org.http4s.client.blaze._
 
-  @transient implicit val logger = LoggerFactory.getLogger(classOf[ChannelSink])
-  @transient private[this] var httpClient = Http1Client[IO](config = BlazeClientConfig.defaultConfig.copy(responseHeaderTimeout = cerebroConfig.timeout seconds)).unsafeRunSync
+  @transient implicit var logger : Logger = _
+  @transient private[this] var httpClient : Client[cats.effect.IO] = _
+
+  override def open(params: Configuration) : Unit = {
+    logger = LoggerFactory.getLogger(classOf[ChannelSink])
+    httpClient = Http1Client[IO](config = BlazeClientConfig.defaultConfig.copy(responseHeaderTimeout = cerebroConfig.timeout seconds)).unsafeRunSync
+  }
 
   /* Flink calls this when it needs to send */
   override def invoke(record : List[SlackChannel]) : Unit = {
@@ -36,6 +45,9 @@ class ChannelSink(cerebroConfig : CerebroSeedChannelsConfig) extends RichSinkFun
       case Right(result) ⇒
         parseResponse(result).bimap((error:String) ⇒ onError(error), (result: Boolean) ⇒ onSuccess(result))
     }
+  }
+
+  override def close() : Unit = {
     httpClient.shutdownNow()
   }
 
@@ -54,9 +66,6 @@ class ChannelSink(cerebroConfig : CerebroSeedChannelsConfig) extends RichSinkFun
       case Left(error) ⇒ "Unable to parse cerebro's configuration".asLeft
       case Right(config) ⇒
         val req = Request[IO](method = POST, uri=config).withBody(Channels(record).asJson.noSpaces).putHeaders(`Content-Type`(MediaType.`application/json`))
-        if (httpClient == null) { /* necessary because 3rd party libs are not Serializable */
-          httpClient = Http1Client[IO](config = BlazeClientConfig.defaultConfig.copy(responseHeaderTimeout = cerebroConfig.timeout seconds)).unsafeRunSync
-        }
         Either.catchOnly[java.net.ConnectException](httpClient.expect[String](req)) match {
           case Left(cannotConnect) ⇒ "cannot connect to cerebro".asLeft
           case Right(ok) ⇒ ok.asRight

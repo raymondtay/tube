@@ -3,19 +3,13 @@ package nugit.tube.api.users
 import nugit.tube.configuration.CerebroSeedUsersConfig
 import nugit.tube.api.model.Users
 import providers.slack.models.User
+import nugit.tube.api.codec._
+import nugit.tube.api.model._
+
 import org.slf4j.{Logger, LoggerFactory}
+import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.functions.sink._
 
-/* Representation objects received from cerebro
- * and when cerebro is ok:
- * (a) {"received" : <some number>}
- * (b) {"message" : [ ... <json objects> ]} this latter format is driven by
- *     Python Flask (which drives Cerebro) and we haven't decided what to do
- *     with these errors just yet.
- *
- */
-case class CerebroOK(received : Int) extends Serializable
-case class CerebroNOK(message : List[io.circe.JsonObject]) /* As long as we see this structure */ extends Serializable
 
 /**
   * Any failures while transfering to Cerebro would result in a RTE being
@@ -37,8 +31,17 @@ class UserSink(cerebroConfig : CerebroSeedUsersConfig) extends RichSinkFunction[
   import org.http4s.headers._
   import org.http4s.client.blaze._
 
-  @transient implicit val logger = LoggerFactory.getLogger(classOf[UserSink])
-  @transient private[this] var httpClient = Http1Client[IO](config = BlazeClientConfig.defaultConfig.copy(responseHeaderTimeout = cerebroConfig.timeout seconds)).unsafeRunSync
+  @transient var logger : Logger = _
+  @transient private[this] var httpClient : Client[cats.effect.IO] = _
+
+  override def open(params: Configuration) : Unit = {
+    logger = LoggerFactory.getLogger(classOf[UserSink])
+    httpClient = Http1Client[IO](config = BlazeClientConfig.defaultConfig.copy(responseHeaderTimeout = cerebroConfig.timeout seconds)).unsafeRunSync
+  }
+
+  override def close() : Unit = {
+    httpClient.shutdownNow()
+  }
 
   /* Flink calls this when it needs to send */
   override def invoke(record : List[User]) : Unit = {
@@ -47,17 +50,15 @@ class UserSink(cerebroConfig : CerebroSeedUsersConfig) extends RichSinkFunction[
       case Right(result) ⇒
         parseResponse(result).bimap((error:String) ⇒ onError(error), (result: Boolean) ⇒ onSuccess(result))
     }
-    httpClient.shutdownNow()
   }
 
   private def onError(error : String) {
     logger.error(s"Error detected while sending data to Cerebro: $error")
-    httpClient.shutdownNow()
     throw new RuntimeException("Error detected while xfer to Cerebro")
   }
 
   private def onSuccess(result: Boolean) {
-    httpClient.shutdownNow()
+    logger.info("Transfer to cerebro is OK.")
   }
 
   private def transferToCerebro : Reader[List[User], Either[String,IO[String]]] = Reader{ (record: List[User]) ⇒
@@ -65,9 +66,6 @@ class UserSink(cerebroConfig : CerebroSeedUsersConfig) extends RichSinkFunction[
       case Left(error) ⇒ "Unable to parse cerebro's configuration".asLeft
       case Right(config) ⇒
         val req = Request[IO](method = POST, uri=config).withBody(Users(record).asJson.noSpaces).putHeaders(`Content-Type`(MediaType.`application/json`))
-        if (httpClient == null) { /* necessary because 3rd party libs are not Serializable */
-          httpClient = Http1Client[IO](config = BlazeClientConfig.defaultConfig.copy(responseHeaderTimeout = cerebroConfig.timeout seconds)).unsafeRunSync
-        }
         Either.catchOnly[java.net.ConnectException](httpClient.expect[String](req)) match {
           case Left(cannotConnect) ⇒ "cannot connect to cerebro".asLeft
           case Right(ok) ⇒ ok.asRight

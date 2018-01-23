@@ -7,6 +7,7 @@ import providers.slack.models.User
 import slacks.core.program.SievedMessages
 
 import org.slf4j.{Logger, LoggerFactory}
+import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.functions.sink._
 
 
@@ -33,8 +34,13 @@ class PostSink(cerebroConfig : CerebroSeedPostsConfig) extends RichSinkFunction[
   import org.http4s.headers._
   import org.http4s.client.blaze._
 
-  @transient var logger = LoggerFactory.getLogger(classOf[PostSink])
-  @transient private[this] var httpClient = Http1Client[IO](config = BlazeClientConfig.defaultConfig.copy(responseHeaderTimeout = cerebroConfig.timeout seconds)).unsafeRunSync
+  @transient var logger : Logger = _
+  @transient private[this] var httpClient : Client[cats.effect.IO] = _
+
+  override def open(params: Configuration) : Unit = {
+    logger = LoggerFactory.getLogger(classOf[PostSink])
+    httpClient = Http1Client[IO](config = BlazeClientConfig.defaultConfig.copy(responseHeaderTimeout = cerebroConfig.timeout seconds)).unsafeRunSync
+  }
 
   /* Closes the http client, and pool as well */
   override def close() : Unit = {
@@ -43,10 +49,6 @@ class PostSink(cerebroConfig : CerebroSeedPostsConfig) extends RichSinkFunction[
 
   /* Flink calls this when it needs to send */
   override def invoke(record : (ChannelPosts, List[String])) : Unit = {
-    if (logger == null) {
-      logger = LoggerFactory.getLogger(classOf[PostSink])
-    }
-
     transferToCerebro.run(record._1) match {
       case Left(error) ⇒ throw new RuntimeException(error)
       case Right(result) ⇒
@@ -69,9 +71,6 @@ class PostSink(cerebroConfig : CerebroSeedPostsConfig) extends RichSinkFunction[
       case Right(config) ⇒
         import JsonCodec._
         val req = Request[IO](method = POST, uri=config).withBody(record.asJson.noSpaces).putHeaders(`Content-Type`(MediaType.`application/json`))
-        if (httpClient == null) { /* necessary because 3rd party libs are not Serializable */
-          httpClient = Http1Client[IO](config = BlazeClientConfig.defaultConfig.copy(responseHeaderTimeout = cerebroConfig.timeout seconds)).unsafeRunSync
-        }
         Either.catchOnly[java.net.ConnectException](httpClient.expect[String](req)) match {
           case Left(cannotConnect) ⇒ "cannot connect to cerebro".asLeft
           case Right(ok) ⇒ ok.asRight
