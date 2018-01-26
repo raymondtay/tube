@@ -31,7 +31,7 @@ class ChannelSink(cerebroConfig : CerebroSeedChannelsConfig) extends RichSinkFun
   import org.http4s.client.blaze._
 
   @transient implicit var logger : Logger = _
-  @transient private[this] var httpClient : Client[cats.effect.IO] = _
+  @transient var httpClient : Client[cats.effect.IO] = _
 
   override def open(params: Configuration) : Unit = {
     logger = LoggerFactory.getLogger(classOf[ChannelSink])
@@ -51,17 +51,17 @@ class ChannelSink(cerebroConfig : CerebroSeedChannelsConfig) extends RichSinkFun
     httpClient.shutdownNow()
   }
 
-  private def onError(error : String) {
+  protected def onError(error : String) {
     logger.error(s"Error detected while sending data to Cerebro: $error")
     httpClient.shutdownNow()
     throw new RuntimeException("Error detected while xfer to Cerebro")
   }
 
-  private def onSuccess(result: Boolean) {
+  protected def onSuccess(result: Boolean) {
     httpClient.shutdownNow()
   }
 
-  private def transferToCerebro : Reader[List[SlackChannel], Either[String,IO[String]]] = Reader{ (record: List[SlackChannel]) ⇒
+  protected def transferToCerebro : Reader[List[SlackChannel], Either[String,IO[String]]] = Reader{ (record: List[SlackChannel]) ⇒
     Uri.fromString(cerebroConfig.url) match {
       case Left(error) ⇒ "Unable to parse cerebro's configuration".asLeft
       case Right(config) ⇒
@@ -77,7 +77,7 @@ class ChannelSink(cerebroConfig : CerebroSeedChannelsConfig) extends RichSinkFun
    * to be either `CerebroNOK` which means that there's invalid json data
    * otherwise its "unknown"
    */
-  private def parseResponse : Reader[IO[String], Either[String,Boolean]] = Reader{ (jsonEffect: IO[String]) ⇒
+  protected def parseResponse : Reader[IO[String], Either[String,Boolean]] = Reader{ (jsonEffect: IO[String]) ⇒
     import io.circe.parser._
     val jsonString = jsonEffect.unsafeRunSync
     decode[CerebroOK](jsonString) match {

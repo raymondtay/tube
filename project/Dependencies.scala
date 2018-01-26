@@ -70,6 +70,6 @@ object Dependencies {
   // Grouping the libraries to logical units
   val generalLibs = Seq(cats, akkaHttp, akkaStream, akkaActors, shapeless, fastparse, scopt) ++ logger ++ circeJson ++ openTracing ++ flinkLibs ++ http4s
 
-  val testLibs = Seq(akkaHttpTest, specs2ScalaCheckTest, scalaTest, flinkTest).map( _ % Test ) ++ circeJson.map(_ % Test) ++ specs2Test.map(_ % Test)
+  val testLibs = Seq(akkaHttpTest, specs2ScalaCheckTest, scalaTest, flinkTest).map( _ % Test ) ++ circeJson.map(_ % Test) ++ specs2Test.map(_ % Test) ++ http4s.map(_ % Test)
 
 }

@@ -16,8 +16,6 @@ import org.apache.flink.streaming.api.functions.sink._
   * thrown and that should restart the sending process by Flink
   * Refer to [https://ci.apache.org/projects/flink/flink-docs-release-1.4/dev/restart_strategies.html#restart-strategies-1]
   *
-  * The implicit parameter here is a channel id that conforms to Slack's
-  * channelId format
   */
 class PostSink(cerebroConfig : CerebroSeedPostsConfig) extends RichSinkFunction[(ChannelPosts, List[String])] {
   import cats._, data._, implicits._
@@ -35,7 +33,7 @@ class PostSink(cerebroConfig : CerebroSeedPostsConfig) extends RichSinkFunction[
   import org.http4s.client.blaze._
 
   @transient var logger : Logger = _
-  @transient private[this] var httpClient : Client[cats.effect.IO] = _
+  @transient var httpClient : Client[cats.effect.IO] = _
 
   override def open(params: Configuration) : Unit = {
     logger = LoggerFactory.getLogger(classOf[PostSink])
@@ -56,16 +54,16 @@ class PostSink(cerebroConfig : CerebroSeedPostsConfig) extends RichSinkFunction[
     }
   }
 
-  private def onError(error : String) {
+  protected def onError(error : String) {
     logger.error(s"Error detected while sending data to Cerebro: $error")
     throw new RuntimeException("Error detected while xfer to Cerebro")
   }
 
-  private def onSuccess(result: Boolean) {
+  protected def onSuccess(result: Boolean) {
     logger.info("Data transferred to cerebro.")
   }
 
-  private def transferToCerebro : Reader[ChannelPosts, Either[String,IO[String]]] = Reader{ (record: ChannelPosts) ⇒
+  protected def transferToCerebro : Reader[ChannelPosts, Either[String,IO[String]]] = Reader{ (record: ChannelPosts) ⇒
     Uri.fromString(cerebroConfig.url) match {
       case Left(error) ⇒ "Unable to parse cerebro's configuration".asLeft
       case Right(config) ⇒
@@ -82,7 +80,7 @@ class PostSink(cerebroConfig : CerebroSeedPostsConfig) extends RichSinkFunction[
    * to be either `CerebroNOK` which means that there's invalid json data
    * otherwise its "unknown"
    */
-  private def parseResponse : Reader[IO[String], Either[String,Boolean]] = Reader{ (jsonEffect: IO[String]) ⇒
+  protected def parseResponse : Reader[IO[String], Either[String,Boolean]] = Reader{ (jsonEffect: IO[String]) ⇒
     import io.circe.parser._
     val jsonString = jsonEffect.unsafeRunSync
     decode[CerebroOK](jsonString) match {
