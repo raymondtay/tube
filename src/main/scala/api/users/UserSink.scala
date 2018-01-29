@@ -1,6 +1,6 @@
 package nugit.tube.api.users
 
-import nugit.tube.configuration.CerebroSeedUsersConfig
+import nugit.tube.configuration.{ApiGatewayConfig, CerebroSeedUsersConfig}
 import nugit.tube.api.model.Users
 import providers.slack.models.User
 import nugit.tube.api.codec._
@@ -16,7 +16,7 @@ import org.apache.flink.streaming.api.functions.sink._
   * thrown and that should restart the sending process by Flink
   * Refer to [https://ci.apache.org/projects/flink/flink-docs-release-1.4/dev/restart_strategies.html#restart-strategies-1]
   */
-class UserSink(cerebroConfig : CerebroSeedUsersConfig) extends RichSinkFunction[List[User]] {
+class UserSink(cerebroConfig : CerebroSeedUsersConfig, gatewayCfg : ApiGatewayConfig) extends RichSinkFunction[List[User]] {
   import cats._, data._, implicits._
   import cats.effect._
   import io.circe._
@@ -65,7 +65,7 @@ class UserSink(cerebroConfig : CerebroSeedUsersConfig) extends RichSinkFunction[
     Uri.fromString(cerebroConfig.url) match {
       case Left(error) ⇒ "Unable to parse cerebro's configuration".asLeft
       case Right(config) ⇒
-        val req = Request[IO](method = POST, uri=config).withBody(Users(record).asJson.noSpaces).putHeaders(`Content-Type`(MediaType.`application/json`), Header("Host", "flink-poc"))
+        val req = Request[IO](method = POST, uri=config).withBody(Users(record).asJson.noSpaces).putHeaders(`Content-Type`(MediaType.`application/json`), `Host`(gatewayCfg.hostname))
         Either.catchOnly[java.net.ConnectException](httpClient.expect[String](req)) match {
           case Left(cannotConnect) ⇒ "cannot connect to cerebro".asLeft
           case Right(ok) ⇒ ok.asRight

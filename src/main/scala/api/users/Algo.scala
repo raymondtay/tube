@@ -1,7 +1,7 @@
 package nugit.tube.api.users
 
 import nugit.routes._
-import nugit.tube.configuration.{ConfigValidator,CerebroSeedUsersConfig}
+import nugit.tube.configuration.{ApiGatewayConfig, ConfigValidator,CerebroSeedUsersConfig}
 import org.apache.flink.streaming.api.scala._
 import org.apache.flink.streaming.api.functions.sink._
 import nugit.tube.api.SlackFunctions._
@@ -37,6 +37,7 @@ trait UsersAlgos {
     */
   def runSeedSlackUsersGraph(config: NonEmptyList[ConfigValidation] Either SlackUsersListConfig[String],
                              cerebroConfig : CerebroSeedUsersConfig,
+                             gatewayConfig : ApiGatewayConfig,
                              env: StreamExecutionEnvironment)
                             (implicit actorSystem : ActorSystem, actorMaterializer : ActorMaterializer) : Reader[SlackAccessToken[String], Option[(List[User], List[String])]] = Reader{ (token: SlackAccessToken[String]) ⇒
 
@@ -45,7 +46,7 @@ trait UsersAlgos {
     users match {
       case Nil ⇒ ((users, logs)).some
       case _   ⇒
-        env.fromCollection(users :: Nil).addSink(new UserSink(cerebroConfig))
+        env.fromCollection(users :: Nil).addSink(new UserSink(cerebroConfig, gatewayConfig))
         env.execute("cerebro-seed-slack-users")
         /* NOTE: be aware that RTEs can be thrown here */
         none

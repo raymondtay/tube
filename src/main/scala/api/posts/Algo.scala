@@ -16,7 +16,7 @@ import slacks.core.program.HttpService
 import nugit.tube.api.Implicits
 import nugit.tube.api.SlackFunctions._
 import nugit.routes._
-import nugit.tube.configuration.{ConfigValidator,CerebroSeedPostsConfig}
+import nugit.tube.configuration.{ApiGatewayConfig, ConfigValidator,CerebroSeedPostsConfig}
 import slacks.core.config._
 import slacks.core.program.SievedMessages
 import providers.slack.models._
@@ -45,6 +45,7 @@ trait PostsAlgos extends Implicits {
   def runSeedSlackPostsGraph(config: NonEmptyList[ConfigValidation] Either SlackChannelListConfig[String],
                              slackReadCfg: NonEmptyList[ConfigValidation] Either SlackChannelReadConfig[String],
                              cerebroConfig : CerebroSeedPostsConfig,
+                             gatewayConfig : ApiGatewayConfig,
                              env: StreamExecutionEnvironment)
                             (implicit actorSystem : ActorSystem, actorMaterializer : ActorMaterializer, httpService : HttpService) : Reader[SlackAccessToken[String], Option[(List[(String, Option[SievedMessages])], List[String])]] = Reader{ (token: SlackAccessToken[String]) ⇒
     val (channels, logs) = getChannelListing(Config.channelListConfig).run(token)
@@ -60,7 +61,7 @@ trait PostsAlgos extends Implicits {
         */
         env.fromParallelCollection(new ChannelIdsSplittableIterator(channelIds)(cerebroConfig))
           .map(new StatefulPostsRetriever(token)(slackReadCfg)).name("channel-posts-retriever")
-          .addSink(new PostSink(cerebroConfig)).name("channel-posts-sink")
+          .addSink(new PostSink(cerebroConfig, gatewayConfig)).name("channel-posts-sink")
         env.execute("cerebro-seed-slack-posts")
         /* NOTE: be aware that RTEs can be thrown here */
         none

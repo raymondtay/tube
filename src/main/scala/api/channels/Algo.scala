@@ -6,7 +6,7 @@ import org.apache.flink.streaming.api.windowing.assigners._
 import org.apache.flink.streaming.api.windowing.time.Time
 import org.apache.flink.streaming.runtime.operators.windowing._
 import nugit.tube.api.SlackFunctions._
-import nugit.tube.configuration.CerebroSeedChannelsConfig
+import nugit.tube.configuration.{ApiGatewayConfig, CerebroSeedChannelsConfig}
 import cats.data.Validated._
 import slacks.core.config.{Config, ConfigValidation, SlackChannelListConfig}
 import providers.slack.models._
@@ -38,6 +38,7 @@ trait ChannelAlgos {
     */
   def runSeedSlackChannelsGraph(config: NonEmptyList[ConfigValidation] Either SlackChannelListConfig[String],
                     cerebroConfig : CerebroSeedChannelsConfig,
+                    gatewayConfig : ApiGatewayConfig,
                     env: StreamExecutionEnvironment)
                    (implicit actorSystem : ActorSystem, actorMaterializer : ActorMaterializer) : Reader[SlackAccessToken[String], Option[(List[SlackChannel], List[String])]] = Reader{ (token: SlackAccessToken[String]) ⇒
 
@@ -46,7 +47,7 @@ trait ChannelAlgos {
     channels match {
       case Nil ⇒ ((channels, logs)).some
       case _   ⇒
-        env.fromCollection(channels :: Nil).addSink(new ChannelSink(cerebroConfig))
+        env.fromCollection(channels :: Nil).addSink(new ChannelSink(cerebroConfig, gatewayConfig))
         env.execute("cerebro-seed-slack-channels")
         /* NOTE: be aware that RTEs can be thrown here */
         none
