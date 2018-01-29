@@ -84,10 +84,14 @@ case class MissingCerebrokey(keyname: String) extends ConfigValidation {
 
 // Cerebro's Configuration
 case class CerebroConfig(
+  apiGatewayCfg : ApiGatewayConfig,
   seedUsersCfg : CerebroSeedUsersConfig,
   seedChannelsCfg : CerebroSeedChannelsConfig,
   seedPostsCfg : CerebroSeedPostsConfig
 )
+
+case class ApiGatewayConfig(hostname: String)
+
 case class CerebroSeedUsersConfig(
   method: String,
   hostname : String,
@@ -177,6 +181,12 @@ sealed trait ConfigValidator extends TimeUnitParser {
     Try{c.getString(s"tube.cerebro.seed.${namespace}.url.method")}.toOption match {
       case Some(cerebroSeedUrlMethod) ⇒ cerebroSeedUrlMethod.validNel
       case None ⇒ MissingCerebrokey(s"tube.cerebro.seed.${namespace}.url.method").invalidNel
+    }
+
+  def validateHost(c: Config) : ValidationResult[String] =
+    Try{c.getString(s"tube.cerebro.gateway.hostname")}.toOption match {
+      case Some(gatewayHost) ⇒ gatewayHost.validNel
+      case None ⇒ MissingCerebrokey(s"tube.cerebro.gateway.hostname").invalidNel
     }
 
   def validateHost(c: Config, namespace: String) : ValidationResult[String] =
@@ -322,7 +332,8 @@ object ConfigValidator extends ConfigValidator {
 
   // Loads Cerebro's configuration
   def loadCerebroConfig(config: Config) =
-    ((validateUrlHttpMethod(config, "users"),
+    ( validateHost(config).map(gwHostname ⇒ ApiGatewayConfig(gwHostname)),
+     (validateUrlHttpMethod(config, "users"),
      validateHost(config, "users"),
      validatePort(config, "users"),
      validateUri(config,  "users"),
@@ -340,7 +351,7 @@ object ConfigValidator extends ConfigValidator {
      validateUri(config,  "posts"),
      validateUrl(config,  "posts"),
      validateTimeout(config, "posts"),
-     validatePartitionSize(config, "posts")).mapN((m,h,p,uri,url,timeout, par_size) ⇒ CerebroSeedPostsConfig(m,h,p,uri,url,timeout,par_size))).mapN((usersCfg, channelsCfg, postsCfg) ⇒ CerebroConfig(usersCfg, channelsCfg, postsCfg))
+     validatePartitionSize(config, "posts")).mapN((m,h,p,uri,url,timeout, par_size) ⇒ CerebroSeedPostsConfig(m,h,p,uri,url,timeout,par_size))).mapN((gatewayCfg, usersCfg, channelsCfg, postsCfg) ⇒ CerebroConfig(gatewayCfg, usersCfg, channelsCfg, postsCfg))
 
 }
 
