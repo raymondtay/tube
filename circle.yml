@@ -7,7 +7,7 @@
 machine:
   environment:
     SBT_VERSION: 0.13.16
-    SBT_OPTS: "-Xms2048M -Xmx2048M -Xss1M -XX:+CMSClassUnloadingEnabled -XX:MaxPermSize=512M"
+    SBT_OPTS: "-Xms4096M -Xmx4096M -Xss1M -XX:+CMSClassUnloadingEnabled -XX:MaxPermSize=512M"
 
 checkout:
   pre:
