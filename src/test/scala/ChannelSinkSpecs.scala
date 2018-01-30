@@ -15,7 +15,7 @@ import Gen.{alphaStr, fail, sequence, nonEmptyContainerOf, choose, pick, mapOf, 
 import slacks.core.config.Config
 import scala.collection.JavaConverters._
 
-import nugit.tube.configuration.CerebroSeedChannelsConfig
+import nugit.tube.configuration.{CerebroSeedChannelsConfig, ApiGatewayConfig}
 import nugit.tube.api.model._
 import nugit.tube.api._
 import providers.slack.models.{SlackChannel, Topic, Purpose}
@@ -66,7 +66,7 @@ class ChannelSinkSpecs extends Specification with ScalaCheck with BeforeAfterAll
         env
           .fromCollection(ChannelSinkSpecData.data :: Nil)
           .map(new IdentityMapper[List[SlackChannel]])
-          .addSink(new ChannelSinkInTest(cfg.seedChannelsCfg, NO_THROW))
+          .addSink(new ChannelSinkInTest(cfg.seedChannelsCfg, cfg.apiGatewayCfg, NO_THROW))
     }
 
     // we must not see any errors
@@ -83,7 +83,7 @@ class ChannelSinkSpecs extends Specification with ScalaCheck with BeforeAfterAll
         env
           .fromCollection(ChannelSinkSpecData.data :: Nil)
           .map(new IdentityMapper[List[SlackChannel]])
-          .addSink(new ChannelSinkInTest(cfg.seedChannelsCfg, THROW_EXPECTED))
+          .addSink(new ChannelSinkInTest(cfg.seedChannelsCfg, cfg.apiGatewayCfg, THROW_EXPECTED))
     }
 
     // we must see errors
@@ -100,7 +100,7 @@ class ChannelSinkSpecs extends Specification with ScalaCheck with BeforeAfterAll
         env
           .fromCollection(ChannelSinkSpecData.data :: Nil)
           .map(new IdentityMapper[List[SlackChannel]])
-          .addSink(new ChannelSinkInTest(cfg.seedChannelsCfg, THROW_UNEXPECTED))
+          .addSink(new ChannelSinkInTest(cfg.seedChannelsCfg, cfg.apiGatewayCfg, THROW_UNEXPECTED))
     }
 
     // we must see errors
@@ -124,7 +124,7 @@ object ChannelSinkSpecData {
 // run on local or remote Flink which means that fields and state needs to be
 // serializable over the wire.
 //
-class ChannelSinkInTest(cerebroCfg: CerebroSeedChannelsConfig, exceptionType: ExceptionTypes.ExceptionType) extends ChannelSink(cerebroCfg) {
+class ChannelSinkInTest(cerebroCfg: CerebroSeedChannelsConfig, gatewayCfg : ApiGatewayConfig, exceptionType: ExceptionTypes.ExceptionType) extends ChannelSink(cerebroCfg, gatewayCfg) {
   import _root_.io.circe.literal._
   import _root_.io.circe.generic.auto._
   import _root_.io.circe.syntax._

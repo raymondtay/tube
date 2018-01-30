@@ -15,7 +15,7 @@ import Gen.{alphaStr, fail, sequence, nonEmptyContainerOf, choose, pick, mapOf, 
 import slacks.core.config.Config
 import scala.collection.JavaConverters._
 
-import nugit.tube.configuration.CerebroSeedUsersConfig
+import nugit.tube.configuration.{ApiGatewayConfig, CerebroSeedUsersConfig}
 import nugit.tube.api.model._
 import nugit.tube.api._
 import providers.slack.models.User
@@ -67,7 +67,7 @@ class UserSinkSpecs extends Specification with ScalaCheck with BeforeAfterAll {o
         env
           .fromCollection(UserSinkSpecData.data :: Nil)
           .map(new IdentityMapper[List[User]])
-          .addSink(new UserSinkInTest(cfg.seedUsersCfg, ExceptionTypes.NO_THROW))
+          .addSink(new UserSinkInTest(cfg.seedUsersCfg, cfg.apiGatewayCfg, ExceptionTypes.NO_THROW))
     }
 
     // we must not see any errors
@@ -84,7 +84,7 @@ class UserSinkSpecs extends Specification with ScalaCheck with BeforeAfterAll {o
         env
           .fromCollection(UserSinkSpecData.data :: Nil)
           .map(new IdentityMapper[List[User]])
-          .addSink(new UserSinkInTest(cfg.seedUsersCfg, ExceptionTypes.THROW_EXPECTED))
+          .addSink(new UserSinkInTest(cfg.seedUsersCfg, cfg.apiGatewayCfg, ExceptionTypes.THROW_EXPECTED))
     }
 
     // we must see errors
@@ -101,7 +101,7 @@ class UserSinkSpecs extends Specification with ScalaCheck with BeforeAfterAll {o
         env
           .fromCollection(UserSinkSpecData.data :: Nil)
           .map(new IdentityMapper[List[User]])
-          .addSink(new UserSinkInTest(cfg.seedUsersCfg, ExceptionTypes.THROW_UNEXPECTED))
+          .addSink(new UserSinkInTest(cfg.seedUsersCfg, cfg.apiGatewayCfg, ExceptionTypes.THROW_UNEXPECTED))
     }
 
     // we must see errors
@@ -125,7 +125,7 @@ object UserSinkSpecData {
 // run on local or remote Flink which means that fields and state needs to be
 // serializable over the wire.
 //
-class UserSinkInTest(cerebroCfg: CerebroSeedUsersConfig, exceptionType: ExceptionTypes.ExceptionType) extends UserSink(cerebroCfg) {
+class UserSinkInTest(cerebroCfg: CerebroSeedUsersConfig, gatewayCfg: ApiGatewayConfig, exceptionType: ExceptionTypes.ExceptionType) extends UserSink(cerebroCfg, gatewayCfg) {
   import _root_.io.circe.literal._
   import _root_.io.circe.generic.auto._
   import _root_.io.circe.syntax._
