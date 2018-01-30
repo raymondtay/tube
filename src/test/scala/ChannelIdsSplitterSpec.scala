@@ -29,7 +29,7 @@ object ChannelIdsData {
   implicit val arbGenGoodCfg3 = Arbitrary(channelIdsGTsize)
 }
 
-class ChannelIdsSplitterSpecs extends mutable.Specification with ScalaCheck {override def is = s2"""
+class ChannelIdsSplitterSpecs extends mutable.Specification with ScalaCheck {override def is = sequential ^ s2"""
   Number of spilts must be as in the configuration $splitEQconfiguration
   Catch RTE when empty containers are passed-in. $whenDataIsEmpty
   Catch RTE when data is less than requested splits $whenDataLTSplits

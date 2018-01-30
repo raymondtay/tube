@@ -14,7 +14,7 @@ import akka.stream._
 import providers.slack.models.{SlackAccessToken,SlackChannel}
 import org.apache.flink.streaming.api.windowing.time.Time
 
-class ChannelAlgosSpecs extends mutable.Specification with ScalaCheck with AfterAll with ChannelAlgos {override def is = s2"""
+class ChannelAlgosSpecs extends mutable.Specification with ScalaCheck with AfterAll with ChannelAlgos {override def is = sequential ^ s2"""
   Tube returns an empty collection of channels when slack access token is invalid $emptyCollectionWhenTokenInvalid
   Tube returns an nothing when data is sunk via a printout and when slack access token is invalid $nothingWhenTokenInvalid
   """

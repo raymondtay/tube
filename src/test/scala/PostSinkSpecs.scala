@@ -39,7 +39,7 @@ import org.http4s.client.blaze._
   * Specification for testing [[PostSink]] 
   * @author Raymond Tay
   */
-class PostSinkSpecs extends Specification with ScalaCheck with BeforeAfterAll {override def is = s2"""
+class PostSinkSpecs extends Specification with ScalaCheck with BeforeAfterAll {override def is = sequential ^ s2"""
   Flink would push data to `PostSink`, should xfer json data to RESTful Cerebro $verifySinkCanPostToRemoteNoErrors
   Flink would push data to `PostSink`, should xfer json data to RESTful Cerebro (Cerebro returns expected errors)    $verifySinkCanPostToRemoteExpectedErrors
   Flink would push data to `PostSink`, should xfer json data to RESTful Cerebro (Cerebro returns un-expected errors) $verifySinkCanPostToRemoteUnexpectedErrors

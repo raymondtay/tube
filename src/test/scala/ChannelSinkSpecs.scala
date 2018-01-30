@@ -36,7 +36,7 @@ import org.http4s.client.blaze._
   * Specification for testing [[ChannelSink]] 
   * @author Raymond Tay
   */
-class ChannelSinkSpecs extends Specification with ScalaCheck with BeforeAfterAll {override def is = s2"""
+class ChannelSinkSpecs extends Specification with ScalaCheck with BeforeAfterAll {override def is = sequential ^ s2"""
   Flink would push channel data to `ChannelSink`, should xfer json data to RESTful Cerebro $verifySinkCanPostToRemoteNoErrors
   Flink would push channel data to `ChannelSink`, should xfer json data to RESTful Cerebro (Cerebro would return expected errors) $verifySinkCanPostToRemoteExpectedErrors
   Flink would push channel data to `ChannelSink`, should xfer json data to RESTful Cerebro (Cerebro would return un-expected errors) $verifySinkCanPostToRemoteUnexpectedErrors

@@ -19,7 +19,7 @@ import nugit.tube.api.SlackFunctions._
 import slacks.core.program.SievedMessages
 import providers.slack.models.{SlackAccessToken,SlackChannel}
 
-class PostsAlgosSpecs extends mutable.Specification with ScalaCheck with AfterAll with PostsAlgos {override def is = s2"""
+class PostsAlgosSpecs extends mutable.Specification with ScalaCheck with AfterAll with PostsAlgos {override def is = sequential ^ s2"""
   Tube returns an key-value pair where the value is an empty collection of messages when slack access token is invalid $emptyCollectionWhenTokenInvalid
   Tube returns nothing when slack access token is invalid $nothingWhenTokenInvalid
   """
