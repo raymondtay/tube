@@ -32,7 +32,7 @@ class UsersAlgosSpecs extends mutable.Specification with ScalaCheck with AfterAl
     val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
     (nugit.tube.configuration.ConfigValidator.loadCerebroConfig(Config.config).toOption : @unchecked) match {
       case Some(cerebroConfig) ⇒
-        (runSeedSlackUsersGraph(Config.usersListConfig, cerebroConfig.seedUsersCfg, env).run(token) : @unchecked) match {
+        (runSeedSlackUsersGraph(Config.usersListConfig, cerebroConfig.seedUsersCfg, cerebroConfig.apiGatewayCfg, env).run(token) : @unchecked) match {
           case Some((users, logs)) ⇒ users.size must_== 0
         }
     }

@@ -18,7 +18,7 @@ import Gen.{alphaStr, fail, sequence, nonEmptyContainerOf, choose, pick, mapOf, 
 import slacks.core.config.Config
 import scala.collection.JavaConverters._
 
-import nugit.tube.configuration.CerebroSeedPostsConfig
+import nugit.tube.configuration.{ApiGatewayConfig,CerebroSeedPostsConfig}
 import nugit.tube.api.model._
 import nugit.tube.api._
 import slacks.core.program.SievedMessages
@@ -69,7 +69,7 @@ class PostSinkSpecs extends Specification with ScalaCheck with BeforeAfterAll {o
         env
           .fromCollection(PostSinkSpecData.data)
           .map(new IdentityMapper[(ChannelPosts, List[String])])
-          .addSink(new PostSinkInTest(cfg.seedPostsCfg, NO_THROW))
+          .addSink(new PostSinkInTest(cfg.seedPostsCfg, cfg.apiGatewayCfg, NO_THROW))
     }
 
     // we must not see any errors
@@ -86,7 +86,7 @@ class PostSinkSpecs extends Specification with ScalaCheck with BeforeAfterAll {o
         env
           .fromCollection(PostSinkSpecData.data)
           .map(new IdentityMapper[(ChannelPosts, List[String])])
-          .addSink(new PostSinkInTest(cfg.seedPostsCfg, THROW_EXPECTED))
+          .addSink(new PostSinkInTest(cfg.seedPostsCfg, cfg.apiGatewayCfg, THROW_EXPECTED))
     }
 
     // we must see errors
@@ -103,7 +103,7 @@ class PostSinkSpecs extends Specification with ScalaCheck with BeforeAfterAll {o
         env
           .fromCollection(PostSinkSpecData.data)
           .map(new IdentityMapper[(ChannelPosts, List[String])])
-          .addSink(new PostSinkInTest(cfg.seedPostsCfg, THROW_UNEXPECTED))
+          .addSink(new PostSinkInTest(cfg.seedPostsCfg, cfg.apiGatewayCfg, THROW_UNEXPECTED))
     }
 
     // we must see errors
@@ -122,7 +122,7 @@ object PostSinkSpecData {
 // run on local or remote Flink which means that fields and state needs to be
 // serializable over the wire.
 //
-class PostSinkInTest(cerebroCfg: CerebroSeedPostsConfig, exceptionType: ExceptionTypes.ExceptionType) extends PostSink(cerebroCfg) {
+class PostSinkInTest(cerebroCfg: CerebroSeedPostsConfig, gatewayCfg: ApiGatewayConfig, exceptionType: ExceptionTypes.ExceptionType) extends PostSink(cerebroCfg, gatewayCfg) {
   import _root_.io.circe.literal._
   import _root_.io.circe.generic.auto._
   import _root_.io.circe.syntax._

@@ -55,7 +55,8 @@ class PostsAlgosSpecs extends mutable.Specification with ScalaCheck with AfterAl
       case Some(cerebroConfig) ⇒
         runSeedSlackPostsGraph(slacks.core.config.Config.channelListConfig,
                                slacks.core.config.Config.channelReadConfig,
-                               cerebroConfig.seedPostsCfg, env).run(token) must beNone
+                               cerebroConfig.seedPostsCfg,
+                               cerebroConfig.apiGatewayCfg, env).run(token) must beNone
     }
   }
 
