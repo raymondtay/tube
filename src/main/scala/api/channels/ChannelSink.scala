@@ -1,5 +1,6 @@
 package nugit.tube.api.channels
 
+import org.apache.flink.metrics.{Counter, SimpleCounter}
 import nugit.tube.configuration.{ApiGatewayConfig, CerebroSeedChannelsConfig}
 import nugit.tube.api.model._
 import providers.slack.models.SlackChannel
@@ -14,6 +15,12 @@ import org.apache.flink.streaming.api.functions.sink._
   * Any failures while transfering to Cerebro would result in a RTE being
   * thrown and that should restart the sending process by Flink
   * Refer to [https://ci.apache.org/projects/flink/flink-docs-release-1.4/dev/restart_strategies.html#restart-strategies-1]
+  * 
+  * The following metrics are implemented:
+  * (a) sink-channel-counter
+  *
+  * @param cerebroConfig Flink will leverage this config object to trigger requests to Cerebro and parse its responses.
+  * @param gatewayCfg Config object that contains Kong specific data
   */
 class ChannelSink(cerebroConfig : CerebroSeedChannelsConfig, gatewayCfg : ApiGatewayConfig) extends RichSinkFunction[List[SlackChannel]] {
   import cats._, data._, implicits._
@@ -32,10 +39,12 @@ class ChannelSink(cerebroConfig : CerebroSeedChannelsConfig, gatewayCfg : ApiGat
 
   @transient implicit var logger : Logger = _
   @transient var httpClient : Client[cats.effect.IO] = _
+  @transient private[this] var cCounter : Counter = _
 
   override def open(params: Configuration) : Unit = {
     logger = LoggerFactory.getLogger(classOf[ChannelSink])
     httpClient = Http1Client[IO](config = BlazeClientConfig.defaultConfig.copy(responseHeaderTimeout = cerebroConfig.timeout seconds)).unsafeRunSync
+    cCounter = getRuntimeContext().getMetricGroup().counter("sink-channel-counter")
   }
 
   /* Flink calls this when it needs to send */
@@ -53,12 +62,11 @@ class ChannelSink(cerebroConfig : CerebroSeedChannelsConfig, gatewayCfg : ApiGat
 
   protected def onError(error : String) {
     logger.error(s"Error detected while sending data to Cerebro: $error")
-    httpClient.shutdownNow()
     throw new RuntimeException("Error detected while xfer to Cerebro")
   }
 
   protected def onSuccess(result: Boolean) {
-    httpClient.shutdownNow()
+    logger.info("Data transferred to cerebro.")
   }
 
   protected def transferToCerebro : Reader[List[SlackChannel], Either[String,IO[String]]] = Reader{ (record: List[SlackChannel]) ⇒
@@ -68,7 +76,9 @@ class ChannelSink(cerebroConfig : CerebroSeedChannelsConfig, gatewayCfg : ApiGat
         val req = Request[IO](method = POST, uri=config).withBody(Channels(record).asJson.noSpaces).putHeaders(`Content-Type`(MediaType.`application/json`), `Host`(gatewayCfg.hostname))
         Either.catchOnly[java.net.ConnectException](httpClient.expect[String](req)) match {
           case Left(cannotConnect) ⇒ "cannot connect to cerebro".asLeft
-          case Right(ok) ⇒ ok.asRight
+          case Right(ok) ⇒ 
+            cCounter.inc(record.size)
+            ok.asRight
         }
     }
   }

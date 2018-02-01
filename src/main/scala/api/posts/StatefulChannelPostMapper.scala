@@ -1,5 +1,6 @@
 package nugit.tube.api.posts
 
+import org.apache.flink.metrics.{Counter, SimpleCounter}
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.functions.source._
 import org.apache.flink.streaming.api.checkpoint.{CheckpointedFunction, ListCheckpointed}
@@ -27,7 +28,14 @@ import providers.slack.models.SlackAccessToken
  * tube's restart strategy (i.e. fixed-delay or failure-rate) then this
  * computation can be re-computed for this channel id only.
  *
+ * The following metrics are implemented:
+ * (a) mapper-channel-counter
+ * (b) mapper-posts-counter
+ *
  * It works in tandem with [[ChannelIdsSplittableIterator]].
+ *
+ * @param token slack token
+ * @param slackReadCfg the configuration object that guides this mapper to connect with cerebro and/or slack's APIs
  */
 class StatefulPostsRetriever(token: SlackAccessToken[String])
                             (slackReadCfg: NonEmptyList[ConfigValidation] Either SlackChannelReadConfig[String])
@@ -38,9 +46,13 @@ class StatefulPostsRetriever(token: SlackAccessToken[String])
   private var atLeastOneSnapshotComplete = false
 
   @transient private[this] var logger : Logger = _
+  @transient private[this] var cCounter : Counter = _
+  @transient private[this] var pCounter : Counter = _
 
   override def open(params: Configuration) : Unit = {
     logger = LoggerFactory.getLogger(classOf[StatefulPostsRetriever])
+    cCounter = getRuntimeContext().getMetricGroup().counter("mapper-channel-counter")
+    pCounter = getRuntimeContext().getMetricGroup().counter("mapper-posts-counter")
   }
 
   override def notifyCheckpointComplete(checkpointId: Long): Unit = {
@@ -64,6 +76,8 @@ class StatefulPostsRetriever(token: SlackAccessToken[String])
 
   /* Members declared in org.apache.flink.api.common.functions.MapFunction */
   override def map(channelId: String): (ChannelPosts, List[String]) = {
+    cCounter.inc()
+
     val snapshotSleepTime = 100
     (atLeastOneSnapshotComplete, restored) match {
       case (false, _) =>
@@ -79,7 +93,14 @@ class StatefulPostsRetriever(token: SlackAccessToken[String])
     }
     val (posts, logs) = getChannelConversationHistory(slackReadCfg)(channelId).run(token)
     this.channelId = channelId
+    /* Count how many messages did we see */
+    pCounter.inc(sumOfMessages(posts.posts))
     (posts, logs)
   }
+
+  /* Int operations are closed under addition so therefore, its ∈ Monoid */
+  private def sumOfMessages(datum : slacks.core.program.SievedMessages) = 
+    Monoid[Int].combine(datum.botMessages.size, Monoid[Int].combine(datum.userAttachmentMessages.size,datum.userFileShareMessages.size))
+  
 }
 

@@ -1,5 +1,6 @@
 package nugit.tube.api.posts
 
+import org.apache.flink.metrics.{Counter, SimpleCounter}
 import nugit.tube.configuration.{ApiGatewayConfig, CerebroSeedPostsConfig}
 import nugit.tube.api.model._
 import nugit.tube.api.codec._
@@ -16,6 +17,11 @@ import org.apache.flink.streaming.api.functions.sink._
   * thrown and that should restart the sending process by Flink
   * Refer to [https://ci.apache.org/projects/flink/flink-docs-release-1.4/dev/restart_strategies.html#restart-strategies-1]
   *
+  * The following metrics are implemented:
+  * (a) sink-posts-counter
+  *
+  * @param cerebroConfig config object used to locate Cerebro
+  * @param gatewayCfg config object for Kongk
   */
 class PostSink(cerebroConfig : CerebroSeedPostsConfig, gatewayCfg : ApiGatewayConfig) extends RichSinkFunction[(ChannelPosts, List[String])] {
   import cats._, data._, implicits._
@@ -32,12 +38,14 @@ class PostSink(cerebroConfig : CerebroSeedPostsConfig, gatewayCfg : ApiGatewayCo
   import org.http4s.headers._
   import org.http4s.client.blaze._
 
-  @transient var logger : Logger = _
-  @transient var httpClient : Client[cats.effect.IO] = _
+  @transient private[this] var logger : Logger = _
+  @transient private[this] var httpClient : Client[cats.effect.IO] = _
+  @transient private[this] var pCounter : Counter = _
 
   override def open(params: Configuration) : Unit = {
     logger = LoggerFactory.getLogger(classOf[PostSink])
     httpClient = Http1Client[IO](config = BlazeClientConfig.defaultConfig.copy(responseHeaderTimeout = cerebroConfig.timeout seconds)).unsafeRunSync
+    pCounter = getRuntimeContext().getMetricGroup().counter("sink-posts-counter")
   }
 
   /* Closes the http client, and pool as well */
@@ -71,7 +79,9 @@ class PostSink(cerebroConfig : CerebroSeedPostsConfig, gatewayCfg : ApiGatewayCo
         val req = Request[IO](method = POST, uri=config).withBody(record.asJson.noSpaces).putHeaders(`Content-Type`(MediaType.`application/json`), `Host`(gatewayCfg.hostname))
         Either.catchOnly[java.net.ConnectException](httpClient.expect[String](req)) match {
           case Left(cannotConnect) ⇒ "cannot connect to cerebro".asLeft
-          case Right(ok) ⇒ ok.asRight
+          case Right(ok) ⇒ 
+            pCounter.inc(sumOfMessages(record.posts))
+            ok.asRight
         }
     }
   }
@@ -101,4 +111,11 @@ class PostSink(cerebroConfig : CerebroSeedPostsConfig, gatewayCfg : ApiGatewayCo
         true.asRight[String]
     }
   }
+
+  /* Int operations are closed under addition so therefore, its ∈ Monoid and i
+   * know its repeated in the Mapper as well. TODO is to refactor
+   **/
+  private def sumOfMessages(datum : slacks.core.program.SievedMessages) = 
+    Monoid[Int].combine(datum.botMessages.size, Monoid[Int].combine(datum.userAttachmentMessages.size,datum.userFileShareMessages.size))
+ 
 }
