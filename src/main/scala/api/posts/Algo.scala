@@ -54,11 +54,6 @@ trait PostsAlgos extends Implicits {
       case Nil ⇒ none
       case _   ⇒
         val channelIds : List[String] = channels.map(_.id)
-        /*
-        val datum = Applicative[List].map(channelIds)(channelId ⇒ getChannelConversationHistory(slackReadCfg)(channelId).run(token))
-        env.fromCollection(datum)
-          .addSink(new PostSink(cerebroConfig))
-        */
         env.fromParallelCollection(new ChannelIdsSplittableIterator(channelIds)(cerebroConfig))
           .map(new StatefulPostsRetriever(token)(slackReadCfg)).name("channel-posts-retriever")
           .addSink(new PostSink(cerebroConfig, gatewayConfig)).name("channel-posts-sink")

@@ -66,7 +66,7 @@ object ConfigurationData {
   implicit val arbGenBadCfg1 = Arbitrary(genBadCfg1)
 }
 
-class ConfigurationSpecs extends mutable.Specification with ScalaCheck { override def is = s2"""
+class ConfigurationSpecs extends mutable.Specification with ScalaCheck { override def is = sequential ^ s2"""
   Tube is only friendly with restart-strategies that are aligned with Apache Flink $restartStrategySpecs1
   Tube catches non friendly restart-strategies $restartStrategySpecs2
   Tube validates the valid configurations in restart-strategies $catchWhenValid

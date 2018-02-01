@@ -28,7 +28,7 @@ object ConfigurationData {
   implicit val arbGenGoodCfg2 = Arbitrary(genGoodCfg2)
 }
 
-class CliSpecs extends mutable.Specification with ScalaCheck { override def is = s2"""
+class CliSpecs extends mutable.Specification with ScalaCheck { override def is = sequential ^ s2"""
   When 'restart-strategy' is set to either 'none', 'fixed-delay' or 'failure-rate'
   -----------------------------------------------------------------------------------
 

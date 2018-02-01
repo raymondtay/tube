@@ -61,7 +61,7 @@ object ConfigurationData {
 /**
   * Specification for `SlackFunctions`
   */
-class SlackApiSpecs(implicit ee: ExecutionEnv) extends Specification with ScalaCheck with Specs2RouteTest { override def is = s2"""
+class SlackApiSpecs(implicit ee: ExecutionEnv) extends Specification with ScalaCheck with Specs2RouteTest { override def is = sequential ^ s2"""
   Catch missing keys in configuration:
   -----------------------------------------
 

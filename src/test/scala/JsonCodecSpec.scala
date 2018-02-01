@@ -126,7 +126,7 @@ object JsonCodecGenerators {
   implicit val arbGenChannelPostsMessage = Arbitrary(genChannelPostsMessage)
 }
 
-class JsonCodecSpecs extends mutable.Specification with ScalaCheck {override def is = s2"""
+class JsonCodecSpecs extends mutable.Specification with ScalaCheck {override def is = sequential ^ s2"""
   Generate 'UserFile' object as valid json $genUserFileJson
   Generate 'UserFileShareMessage' object as valid json $genUserFileShareMessageJson
   Generate 'UserAttachmentMessage' object as valid json $genUserAttachmentMessageJson
