@@ -37,9 +37,9 @@ class ChannelSink(cerebroConfig : CerebroSeedChannelsConfig, gatewayCfg : ApiGat
   import org.http4s.headers._
   import org.http4s.client.blaze._
 
-  @transient implicit var logger : Logger = _
+  @transient var logger : Logger = _
   @transient var httpClient : Client[cats.effect.IO] = _
-  @transient private[this] var cCounter : Counter = _
+  @transient var cCounter : Counter = _
 
   override def open(params: Configuration) : Unit = {
     logger = LoggerFactory.getLogger(classOf[ChannelSink])

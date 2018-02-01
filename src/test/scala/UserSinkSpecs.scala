@@ -140,6 +140,7 @@ class UserSinkInTest(cerebroCfg: CerebroSeedUsersConfig, gatewayCfg: ApiGatewayC
   override def open(params: Configuration) : Unit = {
     logger = LoggerFactory.getLogger(classOf[UserSinkInTest])
     httpClient = Client.fromHttpService(service)
+    uCounter = getRuntimeContext().getMetricGroup().counter("sink-users-counter")
   }
 
   override def close() : Unit = {

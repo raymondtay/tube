@@ -137,6 +137,7 @@ class PostSinkInTest(cerebroCfg: CerebroSeedPostsConfig, gatewayCfg: ApiGatewayC
   override def open(params: Configuration) : Unit = {
     logger = LoggerFactory.getLogger(classOf[PostSinkInTest])
     httpClient = Client.fromHttpService(service)
+    pCounter = getRuntimeContext().getMetricGroup().counter("sink-posts-counter")
   }
 
   override def close() : Unit = {

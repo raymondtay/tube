@@ -38,9 +38,9 @@ class PostSink(cerebroConfig : CerebroSeedPostsConfig, gatewayCfg : ApiGatewayCo
   import org.http4s.headers._
   import org.http4s.client.blaze._
 
-  @transient private[this] var logger : Logger = _
-  @transient private[this] var httpClient : Client[cats.effect.IO] = _
-  @transient private[this] var pCounter : Counter = _
+  @transient var logger : Logger = _
+  @transient var httpClient : Client[cats.effect.IO] = _
+  @transient var pCounter : Counter = _
 
   override def open(params: Configuration) : Unit = {
     logger = LoggerFactory.getLogger(classOf[PostSink])

@@ -139,6 +139,7 @@ class ChannelSinkInTest(cerebroCfg: CerebroSeedChannelsConfig, gatewayCfg : ApiG
   override def open(params: Configuration) : Unit = {
     logger = LoggerFactory.getLogger(classOf[ChannelSinkInTest])
     httpClient = Client.fromHttpService(service)
+    cCounter = getRuntimeContext().getMetricGroup().counter("sink-channel-counter")
   }
 
   override def close() : Unit = {
