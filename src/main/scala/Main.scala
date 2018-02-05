@@ -10,9 +10,10 @@ import nugit.routes._
 import nugit.tube.api.channels._
 import nugit.tube.api.posts._
 import nugit.tube.api.users._
+import nugit.tube.api.teams._
 import akka.http.scaladsl._
 
-object Main extends ChannelAlgos with UsersAlgos with PostsAlgos {
+object Main extends ChannelAlgos with UsersAlgos with PostsAlgos with TeamAlgos {
   import nugit.tube.configuration.{JobTypes, RestartTypes}
   import nugit.tube.api.SlackFunctions._
   import cats.data.Validated._
@@ -110,6 +111,13 @@ object Main extends ChannelAlgos with UsersAlgos with PostsAlgos {
                                  cerebroConfig.seedPostsCfg,
                                  cerebroConfig.apiGatewayCfg,
                                  env).run(testToken)
+        if (commandlineCfg.job_type == JobTypes.team_info)
+          runGetSlackTeamInfo(Config.teamInfoConfig,
+                              Config.emojiListConfig,
+                              cerebroConfig.teamInfoCfg,
+                              cerebroConfig.apiGatewayCfg,
+                              env).run(testToken)
+ 
       case None ⇒
         println("Cerebro's configuration is borked. Exiting.")
         System.exit(-1)
