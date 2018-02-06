@@ -4,6 +4,7 @@ import org.apache.flink.metrics.{Counter, SimpleCounter}
 import nugit.tube.configuration.{ApiGatewayConfig, CerebroSeedPostsConfig}
 import nugit.tube.api.model._
 import nugit.tube.api.codec._
+import providers.slack.algebra.TeamId
 import providers.slack.models.User
 import slacks.core.program.SievedMessages
 
@@ -23,7 +24,7 @@ import org.apache.flink.streaming.api.functions.sink._
   * @param cerebroConfig config object used to locate Cerebro
   * @param gatewayCfg config object for Kongk
   */
-class PostSink(cerebroConfig : CerebroSeedPostsConfig, gatewayCfg : ApiGatewayConfig) extends RichSinkFunction[(ChannelPosts, List[String])] {
+class PostSink(teamId : TeamId, cerebroConfig : CerebroSeedPostsConfig, gatewayCfg : ApiGatewayConfig) extends RichSinkFunction[(ChannelPosts, List[String])] {
   import cats._, data._, implicits._
   import cats.effect._
   import io.circe._
@@ -72,11 +73,16 @@ class PostSink(cerebroConfig : CerebroSeedPostsConfig, gatewayCfg : ApiGatewayCo
   }
 
   protected def transferToCerebro : Reader[ChannelPosts, Either[String,IO[String]]] = Reader{ (record: ChannelPosts) ⇒
-    Uri.fromString(cerebroConfig.url) match {
+    Uri.fromString(cerebroConfig.teamIdPlaceHolder.r.replaceAllIn("<channel_id>".r.replaceAllIn(cerebroConfig.url, record.channel), teamId)) match {
       case Left(error) ⇒ "Unable to parse cerebro's configuration".asLeft
       case Right(config) ⇒
         import JsonCodec._
-        val req = Request[IO](method = POST, uri=config).withBody(record.asJson.noSpaces).putHeaders(`Content-Type`(MediaType.`application/json`), `Host`(gatewayCfg.hostname))
+        val jsonData =
+            record.posts.botMessages.map(_.asJson.noSpaces) ++
+            record.posts.userAttachmentMessages.map(_.asJson.noSpaces) ++
+            record.posts.userFileShareMessages.map(_.asJson.noSpaces)
+
+        val req = Request[IO](method = POST, uri=config).withBody(jsonData.asJson.noSpaces).putHeaders(`Content-Type`(MediaType.`application/json`), `Host`(gatewayCfg.hostname))
         Either.catchOnly[java.net.ConnectException](httpClient.expect[String](req)) match {
           case Left(cannotConnect) ⇒ "cannot connect to cerebro".asLeft
           case Right(ok) ⇒ 

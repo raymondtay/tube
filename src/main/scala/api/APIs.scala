@@ -27,9 +27,10 @@ object SlackFunctions extends Implicits {
   val timeout : Duration = 9 seconds
 
   /**
-    * API to retrieve Team info with the given access token
-    * @param teamCfg
-    * @param emojiCfg
+    * API to retrieve Team info with the given access token; this conflates
+    * both team and emojis used.
+    * @param teamCfg configuration to locate Slack's API for team info
+    * @param emojiCfg configuration to locate Slack's API for emoji info for the team
     * @param token
     */
   def retrieveTeamInfo(teamInfoCfg: NonEmptyList[ConfigValidation] Either SlackTeamInfoConfig[String],
@@ -42,7 +43,7 @@ object SlackFunctions extends Implicits {
     import TeamInfoInterpreter._
 
     implicit val scheduler = ExecutorServices.schedulerFromGlobalExecutionContext
- 
+
     def onError(teamId: TeamId) = Reader{ (e: io.circe.DecodingFailure) ⇒ ((teamId, Team("", "", "", "", Nil)), e.message :: Nil)}
     def onSuccess(logs: List[String])(teamId: TeamId) = Reader{ (team: Team) ⇒ ((teamId, team), logs) }
 
@@ -56,6 +57,32 @@ object SlackFunctions extends Implicits {
       case (Right(_), Left(teamInfoErrors)) ⇒ (("",Team("","","","",Nil)), teamInfoErrors.toList.map(_.errorMessage))
       case (Left(emojiErrors), Right(_)) ⇒ (("",Team("","","","",Nil)), emojiErrors.toList.map(_.errorMessage))
       case (Left(emojiErrors), Left(teamInfoErrors)) ⇒ (("",Team("","","","",Nil)), teamInfoErrors.toList.map(_.errorMessage) ++ emojiErrors.toList.map(_.errorMessage))
+    }
+  }
+
+  /**
+    * API to retrieve Team Id with the given access token.
+    *
+    * @param teamCfg configuration to locate Slack's API for team info
+    * @param token
+    */
+  def retrieveTeam(teamInfoCfg: NonEmptyList[ConfigValidation] Either SlackTeamInfoConfig[String])
+                  (implicit actorSystem : ActorSystem, actorMat : ActorMaterializer, httpService : HttpService)
+                  : Reader[SlackAccessToken[String], (TeamId, List[String])] =  Reader { (accessToken: SlackAccessToken[String]) ⇒
+    import scala.concurrent._, duration._
+    import slacks.core.config.Config
+    import scala.concurrent.ExecutionContext.Implicits.global
+    import TeamInfoInterpreter._
+
+    implicit val scheduler = ExecutorServices.schedulerFromGlobalExecutionContext
+
+    teamInfoCfg match {
+      case Right(teamInfoCfg) ⇒
+        val timeout = teamInfoCfg.timeout seconds
+        val (teamId, logs) =
+          Await.result( getTeam(teamInfoCfg, new RealHttpService).runReader(accessToken).runWriter.runSequential, timeout )
+        ((teamId, logs))
+      case Left(teamInfoErrors) ⇒ (("", teamInfoErrors.toList.map(_.errorMessage)))
     }
   }
 

@@ -17,5 +17,3 @@ case class ChannelPosts(channel: String, posts: SievedMessages) extends Serializ
 case class CerebroOK(received : Int) extends Serializable
 case class CerebroNOK(message : List[io.circe.JsonObject]) /* As long as we see this structure */ extends Serializable
 
-case class Users(users : List[User])
-

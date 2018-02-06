@@ -35,19 +35,22 @@ trait PostsAlgos extends Implicits {
     *     `RestartStrategy` in Flink.
     *     Once data is sunk, it is considered "gone" and we would return None.
     *
-    * @env StreamExecutionEnvironment instance
-    * @config configuration for retrieving slack via REST
-    * @cerebroConfig configuration that reveals where cerebro is hosted
-    * @actorSystem  (environment derived)
-    * @actorMaterializer (environment derived)
-    * @token slack token
+    * @param env StreamExecutionEnvironment instance
+    * @param config configuration for retrieving slack via REST
+    * @param cerebroConfig configuration that reveals where cerebro is hosted
+    * @param actorSystem  (environment derived)
+    * @param actorMaterializer (environment derived)
+    * @param token slack token
     */
-  def runSeedSlackPostsGraph(config: NonEmptyList[ConfigValidation] Either SlackChannelListConfig[String],
+  def runSeedSlackPostsGraph(teamInfoCfg: NonEmptyList[ConfigValidation] Either SlackTeamInfoConfig[String],
+                             config: NonEmptyList[ConfigValidation] Either SlackChannelListConfig[String],
                              slackReadCfg: NonEmptyList[ConfigValidation] Either SlackChannelReadConfig[String],
                              cerebroConfig : CerebroSeedPostsConfig,
                              gatewayConfig : ApiGatewayConfig,
                              env: StreamExecutionEnvironment)
                             (implicit actorSystem : ActorSystem, actorMaterializer : ActorMaterializer, httpService : HttpService) : Reader[SlackAccessToken[String], Option[(List[(String, Option[SievedMessages])], List[String])]] = Reader{ (token: SlackAccessToken[String]) ⇒
+
+    val (teamId, teamLogs) = retrieveTeam(teamInfoCfg).run(token)
     val (channels, logs) = getChannelListing(Config.channelListConfig).run(token)
 
     channels match {
@@ -56,7 +59,7 @@ trait PostsAlgos extends Implicits {
         val channelIds : List[String] = channels.map(_.id)
         env.fromParallelCollection(new ChannelIdsSplittableIterator(channelIds)(cerebroConfig))
           .map(new StatefulPostsRetriever(token)(slackReadCfg)).name("channel-posts-retriever")
-          .addSink(new PostSink(cerebroConfig, gatewayConfig)).name("channel-posts-sink")
+          .addSink(new PostSink(teamId, cerebroConfig, gatewayConfig)).name("channel-posts-sink")
         env.execute("cerebro-seed-slack-posts")
         /* NOTE: be aware that RTEs can be thrown here */
         none

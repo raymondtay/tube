@@ -2,8 +2,8 @@ package nugit.tube.api.users
 
 import org.apache.flink.metrics.{Counter, SimpleCounter}
 import nugit.tube.configuration.{ApiGatewayConfig, CerebroSeedUsersConfig}
-import nugit.tube.api.model.Users
 import providers.slack.models.User
+import providers.slack.algebra.TeamId
 import nugit.tube.api.codec._
 import nugit.tube.api.model._
 
@@ -23,7 +23,7 @@ import org.apache.flink.streaming.api.functions.sink._
   * @param cerebroConfig config object to locate Cerbro
   * @param gatewayCfg config object related to Kong only
   */
-class UserSink(cerebroConfig : CerebroSeedUsersConfig, gatewayCfg : ApiGatewayConfig) extends RichSinkFunction[List[User]] {
+class UserSink(teamId: TeamId, cerebroConfig : CerebroSeedUsersConfig, gatewayCfg : ApiGatewayConfig) extends RichSinkFunction[List[User]] {
   import cats._, data._, implicits._
   import cats.effect._
   import io.circe._
@@ -71,10 +71,10 @@ class UserSink(cerebroConfig : CerebroSeedUsersConfig, gatewayCfg : ApiGatewayCo
   }
 
   protected def transferToCerebro : Reader[List[User], Either[String,IO[String]]] = Reader{ (record: List[User]) ⇒
-    Uri.fromString(cerebroConfig.url) match {
+    Uri.fromString(cerebroConfig.teamIdPlaceHolder.r.replaceAllIn(cerebroConfig.url, teamId)) match {
       case Left(error) ⇒ "Unable to parse cerebro's configuration".asLeft
       case Right(config) ⇒
-        val req = Request[IO](method = POST, uri=config).withBody(Users(record).asJson.noSpaces).putHeaders(`Content-Type`(MediaType.`application/json`), `Host`(gatewayCfg.hostname))
+        val req = Request[IO](method = POST, uri=config).withBody(record.asJson.noSpaces).putHeaders(`Content-Type`(MediaType.`application/json`), `Host`(gatewayCfg.hostname))
         Either.catchOnly[java.net.ConnectException](httpClient.expect[String](req)) match {
           case Left(cannotConnect) ⇒ "cannot connect to cerebro".asLeft
           case Right(ok) ⇒ 

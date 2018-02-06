@@ -96,17 +96,20 @@ object Main extends ChannelAlgos with UsersAlgos with PostsAlgos with TeamAlgos 
     nugit.tube.configuration.ConfigValidator.loadCerebroConfig(Config.config).toOption match {
       case Some(cerebroConfig) ⇒
         if (commandlineCfg.job_type == JobTypes.seed_users)
-          runSeedSlackUsersGraph(Config.usersListConfig,
+          runSeedSlackUsersGraph(Config.teamInfoConfig,
+                                 Config.usersListConfig,
                                  cerebroConfig.seedUsersCfg,
                                  cerebroConfig.apiGatewayCfg,
                                  env).run(testToken)
         if (commandlineCfg.job_type == JobTypes.seed_channels)
-          runSeedSlackChannelsGraph(Config.channelListConfig,
+          runSeedSlackChannelsGraph(Config.teamInfoConfig,
+                                    Config.channelListConfig,
                                     cerebroConfig.seedChannelsCfg,
                                     cerebroConfig.apiGatewayCfg,
                                     env).run(testToken)
         if (commandlineCfg.job_type == JobTypes.seed_posts)
-          runSeedSlackPostsGraph(Config.channelListConfig,
+          runSeedSlackPostsGraph(Config.teamInfoConfig,
+                                 Config.channelListConfig,
                                  Config.channelReadConfig,
                                  cerebroConfig.seedPostsCfg,
                                  cerebroConfig.apiGatewayCfg,
