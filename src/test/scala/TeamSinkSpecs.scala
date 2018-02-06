@@ -1,4 +1,4 @@
-package nugit.tube.api.channels
+package nugit.tube.api.teams
 
 import io.circe._
 import org.slf4j.{Logger, LoggerFactory}
@@ -15,11 +15,11 @@ import Gen.{alphaStr, fail, sequence, nonEmptyContainerOf, choose, pick, mapOf, 
 import slacks.core.config.Config
 import scala.collection.JavaConverters._
 
-import nugit.tube.configuration.{CerebroSeedChannelsConfig, ApiGatewayConfig}
+import nugit.tube.configuration.{ApiGatewayConfig, CerebroTeamInfoConfig}
 import nugit.tube.api.model._
 import nugit.tube.api._
+import providers.slack.models.{Team, Emoji}
 import providers.slack.algebra.TeamId
-import providers.slack.models.{SlackChannel, Topic, Purpose}
 
 import scala.concurrent.duration._
 
@@ -34,14 +34,15 @@ import org.http4s.client.blaze._
 
 
 /**
-  * Specification for testing [[ChannelSink]] 
+  * Specification for testing [[TeamSink]]
   * @author Raymond Tay
   */
-class ChannelSinkSpecs extends Specification with ScalaCheck with BeforeAfterAll {override def is = sequential ^ s2"""
-  Flink would push channel data to `ChannelSink`, should xfer json data to RESTful Cerebro $verifySinkCanPostToRemoteNoErrors
-  Flink would push channel data to `ChannelSink`, should xfer json data to RESTful Cerebro (Cerebro would return expected errors) $verifySinkCanPostToRemoteExpectedErrors
-  Flink would push channel data to `ChannelSink`, should xfer json data to RESTful Cerebro (Cerebro would return un-expected errors) $verifySinkCanPostToRemoteUnexpectedErrors
+class TeamSinkSpecs extends Specification with ScalaCheck with BeforeAfterAll {override def is = sequential ^ s2"""
+  Flink would push user data to `TeamSink`, should xfer json data to RESTful Cerebro $verifySinkCanPostToRemoteNoErrors
+  Flink would push user data to `TeamSink`, should xfer json data to RESTful Cerebro (Cerebro returns expected errors)    $verifySinkCanPostToRemoteExpectedErrors
+  Flink would push user data to `TeamSink`, should xfer json data to RESTful Cerebro (Cerebro returns un-expected errors) $verifySinkCanPostToRemoteUnexpectedErrors
   """
+
   import ExceptionTypes._
   var service : HttpService[IO] = _
   var client: Client[IO] = _
@@ -61,14 +62,14 @@ class ChannelSinkSpecs extends Specification with ScalaCheck with BeforeAfterAll
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     // configure your test environment
     env.setParallelism(1)
-    val teamId = "T1234Q"
+    val teamId = "T123QR"
 
     (nugit.tube.configuration.ConfigValidator.loadCerebroConfig(Config.config).toOption : @unchecked) match {
       case Some(cfg) ⇒ 
         env
-          .fromCollection(ChannelSinkSpecData.data :: Nil)
-          .map(new IdentityMapper[List[SlackChannel]])
-          .addSink(new ChannelSinkInTest(teamId, cfg.seedChannelsCfg, cfg.apiGatewayCfg, NO_THROW))
+          .fromCollection(TeamSinkSpecData.data :: Nil)
+          .map(new IdentityMapper[Team])
+          .addSink(new TeamSinkInTest(teamId, cfg.teamInfoCfg, cfg.apiGatewayCfg, ExceptionTypes.NO_THROW))
     }
 
     // we must not see any errors
@@ -79,14 +80,14 @@ class ChannelSinkSpecs extends Specification with ScalaCheck with BeforeAfterAll
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     // configure your test environment
     env.setParallelism(1)
-    val teamId = "T1234Q"
+    val teamId = "T123QR"
 
     (nugit.tube.configuration.ConfigValidator.loadCerebroConfig(Config.config).toOption : @unchecked) match {
-      case Some(cfg) ⇒
+      case Some(cfg) ⇒ 
         env
-          .fromCollection(ChannelSinkSpecData.data :: Nil)
-          .map(new IdentityMapper[List[SlackChannel]])
-          .addSink(new ChannelSinkInTest(teamId, cfg.seedChannelsCfg, cfg.apiGatewayCfg, THROW_EXPECTED))
+          .fromCollection(TeamSinkSpecData.data :: Nil)
+          .map(new IdentityMapper[Team])
+          .addSink(new TeamSinkInTest(teamId, cfg.teamInfoCfg, cfg.apiGatewayCfg, ExceptionTypes.THROW_EXPECTED))
     }
 
     // we must see errors
@@ -97,14 +98,14 @@ class ChannelSinkSpecs extends Specification with ScalaCheck with BeforeAfterAll
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     // configure your test environment
     env.setParallelism(1)
-    val teamId = "T1234Q"
+    val teamId = "T123QR"
 
     (nugit.tube.configuration.ConfigValidator.loadCerebroConfig(Config.config).toOption : @unchecked) match {
-      case Some(cfg) ⇒
+      case Some(cfg) ⇒ 
         env
-          .fromCollection(ChannelSinkSpecData.data :: Nil)
-          .map(new IdentityMapper[List[SlackChannel]])
-          .addSink(new ChannelSinkInTest(teamId, cfg.seedChannelsCfg, cfg.apiGatewayCfg, THROW_UNEXPECTED))
+          .fromCollection(TeamSinkSpecData.data :: Nil)
+          .map(new IdentityMapper[Team])
+          .addSink(new TeamSinkInTest(teamId, cfg.teamInfoCfg, cfg.apiGatewayCfg, ExceptionTypes.THROW_UNEXPECTED))
     }
 
     // we must see errors
@@ -113,13 +114,9 @@ class ChannelSinkSpecs extends Specification with ScalaCheck with BeforeAfterAll
 
 }
 
-object ChannelSinkSpecData {
-  val data : List[SlackChannel]=
-    List(
-      SlackChannel(id ="fake-channel-id", name = "fake-name", is_channel = true, created = 0L, creator = "", is_archived = false,
-                   is_general = false, name_normalized = "", is_shared = false, is_org_shared  = false, is_member  = false, is_private  = false,
-                   is_mpim = false, members = Nil, topic = Topic("","",0L), purpose = Purpose("","",0L), previous_names = Nil, num_members = 0L)
-    )
+object TeamSinkSpecData {
+  val data : Team =
+    Team(name = "test team name", domain = "test domain", email_domain = "yahoo.com", image_132 = "link to image", emojis= Nil)
 }
 
 
@@ -128,7 +125,7 @@ object ChannelSinkSpecData {
 // run on local or remote Flink which means that fields and state needs to be
 // serializable over the wire.
 //
-class ChannelSinkInTest(teamId: TeamId, cerebroCfg: CerebroSeedChannelsConfig, gatewayCfg : ApiGatewayConfig, exceptionType: ExceptionTypes.ExceptionType) extends ChannelSink(teamId, cerebroCfg, gatewayCfg) {
+class TeamSinkInTest(teamId: TeamId, cerebroCfg: CerebroTeamInfoConfig, gatewayCfg: ApiGatewayConfig, exceptionType: ExceptionTypes.ExceptionType) extends TeamSink(teamId, cerebroCfg, gatewayCfg) {
   import _root_.io.circe.literal._
   import _root_.io.circe.generic.auto._
   import _root_.io.circe.syntax._
@@ -141,13 +138,14 @@ class ChannelSinkInTest(teamId: TeamId, cerebroCfg: CerebroSeedChannelsConfig, g
   }
 
   override def open(params: Configuration) : Unit = {
-    logger = LoggerFactory.getLogger(classOf[ChannelSinkInTest])
+    logger = LoggerFactory.getLogger(classOf[TeamSinkInTest])
     httpClient = Client.fromHttpService(service)
-    cCounter = getRuntimeContext().getMetricGroup().counter("sink-channel-counter")
+    tCounter = getRuntimeContext().getMetricGroup().counter("sink-teams-counter")
   }
 
   override def close() : Unit = {
     httpClient.shutdownNow()
   }
 }
+
 

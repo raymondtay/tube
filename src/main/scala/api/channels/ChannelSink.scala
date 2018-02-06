@@ -3,6 +3,7 @@ package nugit.tube.api.channels
 import org.apache.flink.metrics.{Counter, SimpleCounter}
 import nugit.tube.configuration.{ApiGatewayConfig, CerebroSeedChannelsConfig}
 import nugit.tube.api.model._
+import providers.slack.algebra.TeamId
 import providers.slack.models.SlackChannel
 import nugit.tube.api.codec._
 import nugit.tube.api.model._
@@ -22,7 +23,7 @@ import org.apache.flink.streaming.api.functions.sink._
   * @param cerebroConfig Flink will leverage this config object to trigger requests to Cerebro and parse its responses.
   * @param gatewayCfg Config object that contains Kong specific data
   */
-class ChannelSink(cerebroConfig : CerebroSeedChannelsConfig, gatewayCfg : ApiGatewayConfig) extends RichSinkFunction[List[SlackChannel]] {
+class ChannelSink(teamId : TeamId, cerebroConfig : CerebroSeedChannelsConfig, gatewayCfg : ApiGatewayConfig) extends RichSinkFunction[List[SlackChannel]] {
   import cats._, data._, implicits._
   import cats.effect._
   import io.circe._
@@ -70,10 +71,10 @@ class ChannelSink(cerebroConfig : CerebroSeedChannelsConfig, gatewayCfg : ApiGat
   }
 
   protected def transferToCerebro : Reader[List[SlackChannel], Either[String,IO[String]]] = Reader{ (record: List[SlackChannel]) ⇒
-    Uri.fromString(cerebroConfig.url) match {
+    Uri.fromString(cerebroConfig.teamIdPlaceHolder.r.replaceAllIn(cerebroConfig.url, teamId)) match {
       case Left(error) ⇒ "Unable to parse cerebro's configuration".asLeft
       case Right(config) ⇒
-        val req = Request[IO](method = POST, uri=config).withBody(Channels(record).asJson.noSpaces).putHeaders(`Content-Type`(MediaType.`application/json`), `Host`(gatewayCfg.hostname))
+        val req = Request[IO](method = POST, uri=config).withBody(record.asJson.noSpaces).putHeaders(`Content-Type`(MediaType.`application/json`), `Host`(gatewayCfg.hostname))
         Either.catchOnly[java.net.ConnectException](httpClient.expect[String](req)) match {
           case Left(cannotConnect) ⇒ "cannot connect to cerebro".asLeft
           case Right(ok) ⇒ 

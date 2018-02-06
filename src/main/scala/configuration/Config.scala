@@ -108,7 +108,8 @@ case class CerebroSeedUsersConfig(
   port : Int,
   uri: String,
   url : String,
-  timeout : Long
+  timeout : Long,
+  teamIdPlaceHolder: String
   )
 case class CerebroSeedChannelsConfig(
   method: String,
@@ -116,7 +117,8 @@ case class CerebroSeedChannelsConfig(
   port : Int,
   uri: String,
   url : String,
-  timeout : Long
+  timeout : Long,
+  teamIdPlaceHolder: String
   )
 case class CerebroSeedPostsConfig(
   method: String,
@@ -125,7 +127,8 @@ case class CerebroSeedPostsConfig(
   uri: String,
   url : String,
   timeout : Long,
-  parSize : Int
+  parSize : Int,
+  teamIdPlaceHolder: String
   )
 
 //
@@ -205,9 +208,9 @@ sealed trait ConfigValidator extends TimeUnitParser {
       case None ⇒ MissingCerebrokey(s"tube.cerebro.${namespace}.host").invalidNel
     }
 
-  def validatePlaceHolder(c: Config, namespace: String) : ValidationResult[String] =
-    Try{c.getString(s"tube.cerebro.${namespace}.placeholder")}.toOption match {
-      case Some(cerebroTeamIdPlaceholder) ⇒ cerebroTeamIdPlaceholder.validNel
+  def validatePlaceHolder(c: Config, namespace: String) : ValidationResult[List[String]] =
+    Try{c.getStringList(s"tube.cerebro.${namespace}.placeholder")}.toOption match {
+      case Some(cerebroTeamIdPlaceholder) ⇒ cerebroTeamIdPlaceholder.asScala.toList.validNel
       case None ⇒ MissingCerebrokey(s"tube.cerebro.${namespace}.placeholder").invalidNel
     }
 
@@ -355,26 +358,29 @@ object ConfigValidator extends ConfigValidator {
      validateUri(config,  "team.info"),
      validateUrl(config,  "team.info"),
      validateTimeout(config, "team.info"),
-     validatePlaceHolder(config, "team.info")).mapN((m,h,p,uri,url,timeout, teamIdVar) ⇒ CerebroTeamInfoConfig(m,h,p,uri,url,timeout, teamIdVar)),
+     validatePlaceHolder(config, "team.info")).mapN((m,h,p,uri,url,timeout, teamIdVar) ⇒ CerebroTeamInfoConfig(m,h,p,uri,url,timeout, teamIdVar.head)),
      (validateUrlHttpMethod(config, "seed.users"),
      validateHost(config, "seed.users"),
      validatePort(config, "seed.users"),
      validateUri(config,  "seed.users"),
      validateUrl(config,  "seed.users"),
-     validateTimeout(config, "seed.users")).mapN((m,h,p,uri,url,timeout) ⇒ CerebroSeedUsersConfig(m,h,p,uri,url,timeout)),
+     validateTimeout(config, "seed.users"),
+     validatePlaceHolder(config, "seed.users")).mapN((m,h,p,uri,url,timeout,teamIdVar) ⇒ CerebroSeedUsersConfig(m,h,p,uri,url,timeout,teamIdVar.head)),
     (validateUrlHttpMethod(config, "seed.channels"),
      validateHost(config, "seed.channels"),
      validatePort(config, "seed.channels"),
      validateUri(config,  "seed.channels"),
      validateUrl(config,  "seed.channels"),
-     validateTimeout(config, "seed.channels")).mapN((m,h,p,uri,url,timeout) ⇒ CerebroSeedChannelsConfig(m,h,p,uri,url,timeout)),
+     validateTimeout(config, "seed.channels"),
+     validatePlaceHolder(config, "seed.channels")).mapN((m,h,p,uri,url,timeout,teamIdVar) ⇒ CerebroSeedChannelsConfig(m,h,p,uri,url,timeout,teamIdVar.head)),
     (validateUrlHttpMethod(config, "seed.posts"),
      validateHost(config, "seed.posts"),
      validatePort(config, "seed.posts"),
      validateUri(config,  "seed.posts"),
      validateUrl(config,  "seed.posts"),
      validateTimeout(config, "seed.posts"),
-     validatePartitionSize(config, "seed.posts")).mapN((m,h,p,uri,url,timeout, par_size) ⇒ CerebroSeedPostsConfig(m,h,p,uri,url,timeout,par_size))).mapN((gatewayCfg, teamInfoCfg, usersCfg, channelsCfg, postsCfg) ⇒ CerebroConfig(gatewayCfg, usersCfg, channelsCfg, postsCfg, teamInfoCfg))
+     validatePartitionSize(config, "seed.posts"),
+     validatePlaceHolder(config, "seed.posts")).mapN((m,h,p,uri,url,timeout,par_size,teamIdVar) ⇒ CerebroSeedPostsConfig(m,h,p,uri,url,timeout,par_size,teamIdVar.head))).mapN((gatewayCfg, teamInfoCfg, usersCfg, channelsCfg, postsCfg) ⇒ CerebroConfig(gatewayCfg, usersCfg, channelsCfg, postsCfg, teamInfoCfg))
 
 }
 

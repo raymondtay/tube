@@ -53,7 +53,8 @@ class PostsAlgosSpecs extends mutable.Specification with ScalaCheck with AfterAl
 
     (nugit.tube.configuration.ConfigValidator.loadCerebroConfig(nugit.tube.configuration.Config.config).toOption : @unchecked) match {
       case Some(cerebroConfig) ⇒
-        runSeedSlackPostsGraph(slacks.core.config.Config.channelListConfig,
+        runSeedSlackPostsGraph(slacks.core.config.Config.teamInfoConfig,
+                               slacks.core.config.Config.channelListConfig,
                                slacks.core.config.Config.channelReadConfig,
                                cerebroConfig.seedPostsCfg,
                                cerebroConfig.apiGatewayCfg, env).run(token) must beNone

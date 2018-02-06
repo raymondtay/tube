@@ -35,18 +35,20 @@ trait UsersAlgos {
     * @actorMaterializer (environment derived)
     * @token slack token
     */
-  def runSeedSlackUsersGraph(config: NonEmptyList[ConfigValidation] Either SlackUsersListConfig[String],
+  def runSeedSlackUsersGraph(teamInfoCfg: NonEmptyList[ConfigValidation] Either SlackTeamInfoConfig[String],
+                             config: NonEmptyList[ConfigValidation] Either SlackUsersListConfig[String],
                              cerebroConfig : CerebroSeedUsersConfig,
                              gatewayConfig : ApiGatewayConfig,
                              env: StreamExecutionEnvironment)
                             (implicit actorSystem : ActorSystem, actorMaterializer : ActorMaterializer) : Reader[SlackAccessToken[String], Option[(List[User], List[String])]] = Reader{ (token: SlackAccessToken[String]) ⇒
 
+    val (teamId, teamLogs) = retrieveTeam(teamInfoCfg).run(token)
     val (users, logs) = retrieveAllUsers(config, timeout).run(token)
 
     users match {
       case Nil ⇒ ((users, logs)).some
       case _   ⇒
-        env.fromCollection(users :: Nil).addSink(new UserSink(cerebroConfig, gatewayConfig))
+        env.fromCollection(users :: Nil).addSink(new UserSink(teamId, cerebroConfig, gatewayConfig))
         env.execute("cerebro-seed-slack-users")
         /* NOTE: be aware that RTEs can be thrown here */
         none

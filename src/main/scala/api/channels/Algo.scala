@@ -8,13 +8,11 @@ import org.apache.flink.streaming.runtime.operators.windowing._
 import nugit.tube.api.SlackFunctions._
 import nugit.tube.configuration.{ApiGatewayConfig, CerebroSeedChannelsConfig}
 import cats.data.Validated._
-import slacks.core.config.{Config, ConfigValidation, SlackChannelListConfig}
+import slacks.core.config.{Config, ConfigValidation, SlackTeamInfoConfig, SlackChannelListConfig}
 import providers.slack.models._
 import akka.actor._
 import akka.stream._
 import cats._, data._, implicits._
-
-protected[channels] case class Channels(channels : List[SlackChannel])
 
 trait ChannelAlgos {
 
@@ -36,18 +34,20 @@ trait ChannelAlgos {
     * @actorMaterializer (environment derived)
     * @token slack token
     */
-  def runSeedSlackChannelsGraph(config: NonEmptyList[ConfigValidation] Either SlackChannelListConfig[String],
+  def runSeedSlackChannelsGraph(teamInfoCfg: NonEmptyList[ConfigValidation] Either SlackTeamInfoConfig[String],
+                    config: NonEmptyList[ConfigValidation] Either SlackChannelListConfig[String],
                     cerebroConfig : CerebroSeedChannelsConfig,
                     gatewayConfig : ApiGatewayConfig,
                     env: StreamExecutionEnvironment)
                    (implicit actorSystem : ActorSystem, actorMaterializer : ActorMaterializer) : Reader[SlackAccessToken[String], Option[(List[SlackChannel], List[String])]] = Reader{ (token: SlackAccessToken[String]) ⇒
 
+    val (teamId, teamLogs) = retrieveTeam(teamInfoCfg).run(token)
     val (channels, logs) = getChannelListing(Config.channelListConfig).run(token)
 
     channels match {
       case Nil ⇒ ((channels, logs)).some
       case _   ⇒
-        env.fromCollection(channels :: Nil).addSink(new ChannelSink(cerebroConfig, gatewayConfig))
+        env.fromCollection(channels :: Nil).addSink(new ChannelSink(teamId, cerebroConfig, gatewayConfig))
         env.execute("cerebro-seed-slack-channels")
         /* NOTE: be aware that RTEs can be thrown here */
         none

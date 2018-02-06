@@ -16,6 +16,7 @@ import org.scalacheck._
 import Arbitrary._
 import Gen.{alphaStr, fail, sequence, nonEmptyContainerOf, choose, pick, mapOf, listOfN, oneOf}
 import slacks.core.config.Config
+import providers.slack.algebra.TeamId
 import scala.collection.JavaConverters._
 
 import nugit.tube.configuration.{ApiGatewayConfig,CerebroSeedPostsConfig}
@@ -63,13 +64,14 @@ class PostSinkSpecs extends Specification with ScalaCheck with BeforeAfterAll {o
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     // configure your test environment
     env.setParallelism(1)
+    val teamId = "T12234Q"
 
     (nugit.tube.configuration.ConfigValidator.loadCerebroConfig(Config.config).toOption : @unchecked) match {
       case Some(cfg) ⇒ 
         env
           .fromCollection(PostSinkSpecData.data)
           .map(new IdentityMapper[(ChannelPosts, List[String])])
-          .addSink(new PostSinkInTest(cfg.seedPostsCfg, cfg.apiGatewayCfg, NO_THROW))
+          .addSink(new PostSinkInTest(teamId, cfg.seedPostsCfg, cfg.apiGatewayCfg, NO_THROW))
     }
 
     // we must not see any errors
@@ -80,13 +82,14 @@ class PostSinkSpecs extends Specification with ScalaCheck with BeforeAfterAll {o
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     // configure your test environment
     env.setParallelism(1)
+    val teamId = "T12234Q"
 
     (nugit.tube.configuration.ConfigValidator.loadCerebroConfig(Config.config).toOption : @unchecked) match {
       case Some(cfg) ⇒ 
         env
           .fromCollection(PostSinkSpecData.data)
           .map(new IdentityMapper[(ChannelPosts, List[String])])
-          .addSink(new PostSinkInTest(cfg.seedPostsCfg, cfg.apiGatewayCfg, THROW_EXPECTED))
+          .addSink(new PostSinkInTest(teamId, cfg.seedPostsCfg, cfg.apiGatewayCfg, THROW_EXPECTED))
     }
 
     // we must see errors
@@ -97,13 +100,14 @@ class PostSinkSpecs extends Specification with ScalaCheck with BeforeAfterAll {o
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     // configure your test environment
     env.setParallelism(1)
+    val teamId = "T12234Q"
 
     (nugit.tube.configuration.ConfigValidator.loadCerebroConfig(Config.config).toOption : @unchecked) match {
       case Some(cfg) ⇒ 
         env
           .fromCollection(PostSinkSpecData.data)
           .map(new IdentityMapper[(ChannelPosts, List[String])])
-          .addSink(new PostSinkInTest(cfg.seedPostsCfg, cfg.apiGatewayCfg, THROW_UNEXPECTED))
+          .addSink(new PostSinkInTest(teamId, cfg.seedPostsCfg, cfg.apiGatewayCfg, THROW_UNEXPECTED))
     }
 
     // we must see errors
@@ -122,7 +126,7 @@ object PostSinkSpecData {
 // run on local or remote Flink which means that fields and state needs to be
 // serializable over the wire.
 //
-class PostSinkInTest(cerebroCfg: CerebroSeedPostsConfig, gatewayCfg: ApiGatewayConfig, exceptionType: ExceptionTypes.ExceptionType) extends PostSink(cerebroCfg, gatewayCfg) {
+class PostSinkInTest(teamId: TeamId, cerebroCfg: CerebroSeedPostsConfig, gatewayCfg: ApiGatewayConfig, exceptionType: ExceptionTypes.ExceptionType) extends PostSink(teamId, cerebroCfg, gatewayCfg) {
   import _root_.io.circe.literal._
   import _root_.io.circe.generic.auto._
   import _root_.io.circe.syntax._
