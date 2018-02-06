@@ -77,7 +77,6 @@ class TeamSink(teamId: TeamId,
       case Left(error) ⇒ "Unable to parse cerebro's configuration".asLeft
       case Right(config) ⇒
         import io.circe.generic.auto._, io.circe.syntax._
-        println(s"Going out:\n${record.asJson.noSpaces}\n")
         val req = Request[IO](method = POST, uri=config).withBody(record.asJson.noSpaces).putHeaders(`Content-Type`(MediaType.`application/json`), `Host`(gatewayCfg.hostname))
         Either.catchOnly[java.net.ConnectException](httpClient.expect[String](req)) match {
           case Left(cannotConnect) ⇒ "cannot connect to cerebro".asLeft
