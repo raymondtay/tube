@@ -74,6 +74,13 @@ REST APIs. To run it, do the following:
 - `cd $HOME/flink-1.4.0`
 - `./bin/flink run tube-assembly-0.1-SNAPSHOT.jar -P {1|2|X number of parallel jobs} -X seed_posts -S {none|fixed-delay|failure-rate}`
 
+## Get team info
+
+`tube` uses `slacks` to extract team and emojis used by the team from slack via its REST APIs. To run it, do the following:
+
+- `cd $HOME/flink-1.4.0`
+- `./bin/flink run tube-assembly-0.1-SNAPSHOT.jar -P {1|2|X number of parallel jobs} -X team_info -S {none|fixed-delay|failure-rate}`
+
 Here is what you might get when you successfully ran it:
 ![Screen to Tube running against Flink](./images/tube_on_flink.png)
 
