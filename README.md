@@ -49,14 +49,18 @@ node with _n_ slave nodes.)
 - Run `sbt coverageOff assembly` (this should give you a _fat_ jar file e.g.  `tube-assembly-0.1-SNAPSHOT.jar`)
 -- In CI/CD environments, this would be automated.
 - Take that _fat_ jar file and run it against the Flink e.g. `bin/flink run tube-assembly-0.1-SNAPSHOT.jar`
-
+- At this point in time, you should have the slack token which is ready to be
+  consumed by `Tube`. The token is a long string which is prefixed by either
+  `xoxp-`, `xoxa-` or `xoxb-` (*Note:* `Tube` does not support slack's legacy
+  tokens; and you might need to quote the slack token to prevent the
+  commandline to parse it.)
 ## Seed Users
 
 `tube` uses `slacks` to extract the total number of users from slack via its
 REST APIs. To run it, do the following:
 
 - `cd $HOME/flink-1.4.0`
-- `./bin/flink run tube-assembly-0.1-SNAPSHOT.jar -X seed_users -S {none|fixed-delay|failure-rate}`
+- `./bin/flink run tube-assembly-0.1-SNAPSHOT.jar -T <slack token> -X seed_users -S {none|fixed-delay|failure-rate}`
 
 ## Seed Channels
 
@@ -64,7 +68,7 @@ REST APIs. To run it, do the following:
 REST APIs. To run it, do the following:
 
 - `cd $HOME/flink-1.4.0`
-- `./bin/flink run tube-assembly-0.1-SNAPSHOT.jar -X seed_channels -S {none|fixed-delay|failure-rate}`
+- `./bin/flink run tube-assembly-0.1-SNAPSHOT.jar -T <slack token> -X seed_channels -S {none|fixed-delay|failure-rate}`
 
 ## Seed Channel Posts
 
@@ -72,14 +76,14 @@ REST APIs. To run it, do the following:
 REST APIs. To run it, do the following:
 
 - `cd $HOME/flink-1.4.0`
-- `./bin/flink run tube-assembly-0.1-SNAPSHOT.jar -P {1|2|X number of parallel jobs} -X seed_posts -S {none|fixed-delay|failure-rate}`
+- `./bin/flink run tube-assembly-0.1-SNAPSHOT.jar -T <slack token> -P {1|2|X number of parallel jobs} -X seed_posts -S {none|fixed-delay|failure-rate}`
 
 ## Get team info
 
 `tube` uses `slacks` to extract team and emojis used by the team from slack via its REST APIs. To run it, do the following:
 
 - `cd $HOME/flink-1.4.0`
-- `./bin/flink run tube-assembly-0.1-SNAPSHOT.jar -P {1|2|X number of parallel jobs} -X team_info -S {none|fixed-delay|failure-rate}`
+- `./bin/flink run tube-assembly-0.1-SNAPSHOT.jar -T <slack token> -P {1|2|X number of parallel jobs} -X team_info -S {none|fixed-delay|failure-rate}`
 
 Here is what you might get when you successfully ran it:
 ![Screen to Tube running against Flink](./images/tube_on_flink.png)
