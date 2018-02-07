@@ -23,7 +23,7 @@ object SlackFunctions extends Implicits {
   import nugit.tube.api.model.ChannelPosts
 
   // Test tokens, do not use in PRODUCTION
-  val testToken = SlackAccessToken("xoxp-2169191837-242649061349-267955267123-5e965193f448a1ccbb3bbf6f97083f78", "channel:list" :: Nil)
+  val testToken = SlackAccessToken(Token("xoxp-","2169191837-242649061349-267955267123-5e965193f448a1ccbb3bbf6f97083f78"), "channel:list" :: Nil)
   val timeout : Duration = 9 seconds
 
   /**

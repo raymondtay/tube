@@ -54,11 +54,11 @@ object Main extends ChannelAlgos with UsersAlgos with PostsAlgos with TeamAlgos 
   def setupRestartOption(env : StreamExecutionEnvironment)
                         (defaultCfg: nugit.tube.configuration.TubeRestartConfig) : Reader[TubeConfig, Unit] = Reader{ (cfg: TubeConfig) ⇒
     cfg match {
-      case TubeConfig(RestartTypes.none, _, _)        ⇒ env.setRestartStrategy(RestartStrategies.noRestart())
-      case TubeConfig(RestartTypes.fixed_delay, _, _) ⇒
+      case TubeConfig(RestartTypes.none, _, _, _)        ⇒ env.setRestartStrategy(RestartStrategies.noRestart())
+      case TubeConfig(RestartTypes.fixed_delay, _, _, _) ⇒
         val _c = defaultCfg.fdCfg
         env.setRestartStrategy(RestartStrategies.fixedDelayRestart(_c.attempts.toInt, Time.milliseconds(_c.delay)))
-      case TubeConfig(RestartTypes.failure_rate, _, _) ⇒
+      case TubeConfig(RestartTypes.failure_rate, _, _, _) ⇒
         val _c = defaultCfg.frCfg
         env.setRestartStrategy(RestartStrategies.failureRateRestart(_c.max_failures_per_interval.toInt, Time.milliseconds(_c.failure_rate_interval), Time.milliseconds(_c.delay)))
     }
@@ -100,26 +100,26 @@ object Main extends ChannelAlgos with UsersAlgos with PostsAlgos with TeamAlgos 
                                  Config.usersListConfig,
                                  cerebroConfig.seedUsersCfg,
                                  cerebroConfig.apiGatewayCfg,
-                                 env).run(testToken)
+                                 env).run(SlackAccessToken(commandlineCfg.token.get, Nil))
         if (commandlineCfg.job_type == JobTypes.seed_channels)
           runSeedSlackChannelsGraph(Config.teamInfoConfig,
                                     Config.channelListConfig,
                                     cerebroConfig.seedChannelsCfg,
                                     cerebroConfig.apiGatewayCfg,
-                                    env).run(testToken)
+                                    env).run(SlackAccessToken(commandlineCfg.token.get, Nil))
         if (commandlineCfg.job_type == JobTypes.seed_posts)
           runSeedSlackPostsGraph(Config.teamInfoConfig,
                                  Config.channelListConfig,
                                  Config.channelReadConfig,
                                  cerebroConfig.seedPostsCfg,
                                  cerebroConfig.apiGatewayCfg,
-                                 env).run(testToken)
+                                 env).run(SlackAccessToken(commandlineCfg.token.get, Nil))
         if (commandlineCfg.job_type == JobTypes.team_info)
           runGetSlackTeamInfo(Config.teamInfoConfig,
                               Config.emojiListConfig,
                               cerebroConfig.teamInfoCfg,
                               cerebroConfig.apiGatewayCfg,
-                              env).run(testToken)
+                              env).run(SlackAccessToken(commandlineCfg.token.get, Nil))
  
       case None ⇒
         println("Cerebro's configuration is borked. Exiting.")

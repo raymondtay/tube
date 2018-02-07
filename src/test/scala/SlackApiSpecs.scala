@@ -21,6 +21,7 @@ import cats._, implicits._
 import akka.actor._
 import akka.stream._
 import providers.slack.models._
+import slacks.core.models.Token
 import slacks.core.program._
 
 object ConfigurationData {
@@ -81,7 +82,7 @@ class SlackApiSpecs(implicit ee: ExecutionEnv) extends Specification with ScalaC
     import scala.concurrent._, duration._
     import slacks.core.config._
     implicit val fakeService = new FakeChannelListingHttpService
-    val token = SlackAccessToken("fake-token", "channel:list" :: Nil)
+    val token = SlackAccessToken(Token("xoxp-","fake"), "channel:list" :: Nil)
 
     import ConfigurationData.arbBadListingConfigs
     prop { (config : Config) ⇒
@@ -96,7 +97,7 @@ class SlackApiSpecs(implicit ee: ExecutionEnv) extends Specification with ScalaC
     import scala.concurrent._, duration._
     import slacks.core.config._
     implicit val fakeService = new FakeChannelHistoryHttpService
-    val token = SlackAccessToken("fake-token", "channel:list" :: Nil)
+    val token = SlackAccessToken(Token("xoxp-","fake"), "channel:list" :: Nil)
 
     import ConfigurationData.arbBadHistoryConfigs
     prop { (config : Config) ⇒
@@ -112,7 +113,7 @@ class SlackApiSpecs(implicit ee: ExecutionEnv) extends Specification with ScalaC
     import slacks.core.config._
 
     implicit val fakeService = new FakeChannelListingHttpService
-    val token = SlackAccessToken("fake-token", "channel:list" :: Nil)
+    val token = SlackAccessToken(Token("xoxp-","fake"), "channel:list" :: Nil)
     val (channels, loginfo) = getChannelListing(Config.channelListConfig).run(token)
     channels.size > 0
   }
@@ -123,7 +124,7 @@ class SlackApiSpecs(implicit ee: ExecutionEnv) extends Specification with ScalaC
     import slacks.core.config._
 
     implicit val fakeService = new FakeChannelListingErrorHttpService
-    val token = SlackAccessToken("fake-token", "channel:list" :: Nil)
+    val token = SlackAccessToken(Token("xoxp-","fake"), "channel:list" :: Nil)
     val (channels, loginfo) = getChannelListing(Config.channelListConfig).run(token)
     channels.size == 0
   }
@@ -134,7 +135,7 @@ class SlackApiSpecs(implicit ee: ExecutionEnv) extends Specification with ScalaC
     import slacks.core.config._
 
     implicit val fakeService = new FakeChannelHistoryHttpService
-    val token = SlackAccessToken("fake-token", "channel:list" :: Nil)
+    val token = SlackAccessToken(Token("xoxp-","fake"), "channel:list" :: Nil)
     val (channels, loginfo) = getChannelHistory(Config.channelReadConfig)("fake-channel-id", 2 second).run(token)
     channels.size > 0
   }
@@ -145,7 +146,7 @@ class SlackApiSpecs(implicit ee: ExecutionEnv) extends Specification with ScalaC
     import slacks.core.config._
 
     implicit val fakeService = new FakeChannelHistoryErrorHttpService
-    val token = SlackAccessToken("fake-token", "channel:list" :: Nil)
+    val token = SlackAccessToken(Token("xoxp-","fake"), "channel:list" :: Nil)
     val (channels, loginfo) = getChannelHistory(Config.channelReadConfig)("fake-channel-id", 2 second).run(token)
     channels.size == 0
   }

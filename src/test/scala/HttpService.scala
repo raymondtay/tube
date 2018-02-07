@@ -1,6 +1,7 @@
 package nugit.tube.api
 
 import providers.slack.algebra._
+import slacks.core.models.Token
 import providers.slack.models.SlackAccessToken
 import slacks.core.program.HttpService
 import slacks.core.config.SlackAccessConfig
@@ -86,7 +87,7 @@ class FakeOAuthHttpService extends HttpService {
   import scala.concurrent.Future
   override def makeSingleRequest(implicit http: HttpExt, akkaMat: ActorMaterializer) : Kleisli[Future,String,HttpResponse]= Kleisli{
     (_uri: String) ⇒
-      val token = SlackAccessToken("test-token", "read" :: Nil)
+      val token = SlackAccessToken(Token("xoxp-", "fake"), "read" :: Nil)
       import io.circe._, io.circe.syntax._, io.circe.generic.auto._
       Future.successful(
         HttpResponse(entity = HttpEntity(`application/json`, token.asJson.noSpaces.toString))

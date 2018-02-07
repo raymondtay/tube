@@ -11,6 +11,7 @@ import org.apache.flink.streaming.api.scala._
 import org.apache.flink.streaming.api.functions.sink._
 import akka.actor._
 import akka.stream._
+import slacks.core.models.Token
 import providers.slack.models.{SlackAccessToken,SlackChannel}
 import org.apache.flink.streaming.api.windowing.time.Time
 
@@ -28,7 +29,7 @@ class ChannelAlgosSpecs extends mutable.Specification with ScalaCheck with After
   }
 
   def emptyCollectionWhenTokenInvalid = {
-    val token = SlackAccessToken("fake", "channel:list" :: Nil)
+    val token = SlackAccessToken(Token("xoxp-","fake"), "channel:list" :: Nil)
 
     val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
     val partF = (c: SlackChannel) ⇒ c.num_members >= 5
@@ -41,7 +42,7 @@ class ChannelAlgosSpecs extends mutable.Specification with ScalaCheck with After
   }
 
   def nothingWhenTokenInvalid = {
-    val token = SlackAccessToken("fake", "channel:list" :: Nil)
+    val token = SlackAccessToken(Token("xoxp-","fake"), "channel:list" :: Nil)
 
     val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
     val partF = (c: SlackChannel) ⇒ c.num_members >= 5

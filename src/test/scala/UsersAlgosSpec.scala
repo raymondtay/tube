@@ -11,6 +11,7 @@ import org.apache.flink.streaming.api.scala._
 import org.apache.flink.streaming.api.functions.sink._
 import akka.actor._
 import akka.stream._
+import slacks.core.models.Token
 import providers.slack.models.SlackAccessToken
 import slacks.core.config.Config
 
@@ -27,7 +28,7 @@ class UsersAlgosSpecs extends mutable.Specification with ScalaCheck with AfterAl
   }
 
   def emptyCollectionWhenTokenInvalid = {
-    val token = SlackAccessToken("fake", "channel:list" :: Nil)
+    val token = SlackAccessToken(Token("xoxp-","fake"), "channel:list" :: Nil)
 
     val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
     (nugit.tube.configuration.ConfigValidator.loadCerebroConfig(Config.config).toOption : @unchecked) match {

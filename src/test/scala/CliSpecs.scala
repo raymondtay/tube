@@ -21,8 +21,8 @@ object ConfigurationData {
     Array("--parallelism", "3", "--restart-strategy", "fixed_delay")
   )
 
-  val genGoodCfg1 = for { cfg <- oneOf(overrideRestartStrategyOnly) } yield cfg
-  val genGoodCfg2 = for { cfg <- oneOf(overrideParallelismOnly) } yield cfg
+  val genGoodCfg1 = for { cfg <- oneOf(overrideRestartStrategyOnly) } yield Array("--slack-token", "xoxp-fake123-token23333") ++ cfg
+  val genGoodCfg2 = for { cfg <- oneOf(overrideParallelismOnly) } yield Array("--slack-token", "xoxp-fake123-token23333") ++ cfg
 
   implicit val arbGenGoodCfg1 = Arbitrary(genGoodCfg1)
   implicit val arbGenGoodCfg2 = Arbitrary(genGoodCfg2)
