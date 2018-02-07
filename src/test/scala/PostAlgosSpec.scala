@@ -16,6 +16,7 @@ import akka.actor._
 import akka.stream._
 
 import nugit.tube.api.SlackFunctions._
+import slacks.core.models.Token
 import slacks.core.program.SievedMessages
 import providers.slack.models.{SlackAccessToken,SlackChannel}
 
@@ -33,7 +34,7 @@ class PostsAlgosSpecs extends mutable.Specification with ScalaCheck with AfterAl
   }
 
   def emptyCollectionWhenTokenInvalid = {
-    val token = SlackAccessToken("fake", "channel:list" :: Nil)
+    val token = SlackAccessToken(Token("xoxp-","aaa"), "channel:list" :: Nil)
     val channelId = "fake-channel-id"
     val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
 
@@ -47,7 +48,7 @@ class PostsAlgosSpecs extends mutable.Specification with ScalaCheck with AfterAl
   }
 
   def nothingWhenTokenInvalid = {
-    val token = SlackAccessToken("fake", "channel:list" :: Nil)
+    val token = SlackAccessToken(Token("xoxp-","aaa"), "channel:list" :: Nil)
     val channelId = "fake-channel-id"
     val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
 
