@@ -7,7 +7,7 @@
 machine:
   environment:
     SBT_VERSION: 0.13.16
-    SBT_OPTS: "-Xms1536M -Xmx1536M -Xss1M -XX:+CMSClassUnloadingEnabled"
+    SBT_OPTS: "-Xms3072M -Xmx3072M -Xss1M -XX:+CMSClassUnloadingEnabled"
 
 checkout:
   pre:
@@ -30,8 +30,7 @@ dependencies:
 
 test:
   override:
-    - sbt coverageOn clean test
-    - sbt coverageReport
+    - sbt coverageOn test coverageReport
   post:
     - mkdir -p $CIRCLE_ARTIFACTS/scala-2.11
     - mv target/scala-2.11/coverage-report  $CIRCLE_ARTIFACTS/scala-2.11/coverage-report
