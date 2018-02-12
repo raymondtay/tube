@@ -16,6 +16,7 @@ import akka.actor._
 import nugit.tube.api.model.ChannelPosts
 import nugit.tube.api.SlackFunctions._
 import slacks.core.config._
+import slacks.core.program.HttpService
 import providers.slack.models.SlackAccessToken
 
 
@@ -91,7 +92,7 @@ class StatefulPostsRetriever(token: SlackAccessToken[String])
         println     ("[map] Recovered at least 1 snapshot but state is not restored")
         logger.debug("[map] Recovered at least 1 snapshot but state is not restored")
     }
-    val (posts, logs) = getChannelConversationHistory(slackReadCfg)(channelId).run(token)
+    val (posts, logs) = getChannelConversationHistory(slackReadCfg)(channelId)(new slacks.core.program.RealHttpService).run(token)
     this.channelId = channelId
     /* Count how many messages did we see */
     pCounter.inc(sumOfMessages(posts.posts))

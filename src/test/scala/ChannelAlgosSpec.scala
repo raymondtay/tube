@@ -31,23 +31,27 @@ class ChannelAlgosSpecs extends mutable.Specification with ScalaCheck with After
   def emptyCollectionWhenTokenInvalid = {
     val token = SlackAccessToken(Token("xoxp-","fake"), "channel:list" :: Nil)
 
+    val httpService = new nugit.tube.api.FakeChannelListingHttpService
+
     val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
     val partF = (c: SlackChannel) ⇒ c.num_members >= 5
     val slideSizeUnit = 100
     val windowSize = Time.seconds(1)
     val slideSize = Time.milliseconds(slideSizeUnit)
     val ((leftAgg, rightAgg), logs) =
-      retrieveChannels(slacks.core.config.Config.channelListConfig, partF, windowSize, slideSize, env).run(token)
+      retrieveChannels(slacks.core.config.Config.channelListConfig, partF, windowSize, slideSize, env)(httpService).run(token)
     (leftAgg ++ rightAgg).size must_== 0
   }
 
   def nothingWhenTokenInvalid = {
     val token = SlackAccessToken(Token("xoxp-","fake"), "channel:list" :: Nil)
 
+    val httpService = new nugit.tube.api.FakeChannelListingHttpService
+
     val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
     val partF = (c: SlackChannel) ⇒ c.num_members >= 5
     val logs =
-      displayChannels(slacks.core.config.Config.channelListConfig, partF, env).run(token)
+      displayChannels(slacks.core.config.Config.channelListConfig, partF, env)(httpService).run(token)
     logs.size must be_>=(1)
   }
 

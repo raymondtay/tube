@@ -9,6 +9,7 @@ import nugit.tube.api.SlackFunctions._
 import nugit.tube.configuration.{ApiGatewayConfig, CerebroSeedChannelsConfig}
 import cats.data.Validated._
 import slacks.core.config.{Config, ConfigValidation, SlackTeamInfoConfig, SlackChannelListConfig}
+import slacks.core.program.{HttpService, RealHttpService}
 import providers.slack.models._
 import akka.actor._
 import akka.stream._
@@ -39,10 +40,11 @@ trait ChannelAlgos {
                     cerebroConfig : CerebroSeedChannelsConfig,
                     gatewayConfig : ApiGatewayConfig,
                     env: StreamExecutionEnvironment)
+                    (httpService : HttpService)
                    (implicit actorSystem : ActorSystem, actorMaterializer : ActorMaterializer) : Reader[SlackAccessToken[String], Option[(List[SlackChannel], List[String])]] = Reader{ (token: SlackAccessToken[String]) ⇒
 
-    val (teamId, teamLogs) = retrieveTeam(teamInfoCfg).run(token)
-    val (channels, logs) = getChannelListing(Config.channelListConfig).run(token)
+    val (teamId, teamLogs) = retrieveTeam(teamInfoCfg)(httpService).run(token)
+    val (channels, logs) = getChannelListing(Config.channelListConfig)(httpService).run(token)
 
     channels match {
       case Nil ⇒ ((channels, logs)).some
@@ -68,12 +70,13 @@ trait ChannelAlgos {
                        windowSize : Time,
                        slideTime : Time,
                        env: StreamExecutionEnvironment)
+                      (httpService : HttpService)
                       (implicit actorSystem : ActorSystem, actorMaterializer : ActorMaterializer) = Reader{ (token: SlackAccessToken[String]) ⇒
 
     val channelNameA = "more than or equal to 5 members"
     val channelNameB = "less than 5 members"
 
-    val (channels, logs) = getChannelListing(Config.channelListConfig).run(token)
+    val (channels, logs) = getChannelListing(Config.channelListConfig)(httpService).run(token)
 
     println(s"Total number of channels: ${channels.size}")
 
@@ -112,12 +115,13 @@ trait ChannelAlgos {
   def displayChannels(config: NonEmptyList[ConfigValidation] Either SlackChannelListConfig[String],
                       partitionFunction : SlackChannel ⇒ Boolean,
                       env: StreamExecutionEnvironment)
+                     (httpService : HttpService)
                      (implicit actorSystem : ActorSystem, actorMaterializer : ActorMaterializer) = Reader{ (token: SlackAccessToken[String]) ⇒
 
     val channelNameA = "more than or equal to 5 members"
     val channelNameB = "less than 5 members"
 
-    val (channels, logs) = getChannelListing(config).run(token)
+    val (channels, logs) = getChannelListing(config)(httpService).run(token)
     println(s"Total number of channels: ${channels.size}")
     channels.map(c => println(c.id+","+c.name))
     val channelsEnv = env.fromCollection(channels)

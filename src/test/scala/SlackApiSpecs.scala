@@ -78,76 +78,77 @@ class SlackApiSpecs(implicit ee: ExecutionEnv) extends Specification with ScalaC
   """
 
   def catchListingConfigErrors = {
-    import SlackFunctions.{httpService ⇒ _, _}
     import scala.concurrent._, duration._
+    import SlackFunctions._
     import slacks.core.config._
-    implicit val fakeService = new FakeChannelListingHttpService
+
+    val fakeService = new FakeChannelListingHttpService
     val token = SlackAccessToken(Token("xoxp-","fake"), "channel:list" :: Nil)
 
     import ConfigurationData.arbBadListingConfigs
     prop { (config : Config) ⇒
       val parsedConfig = ConfigValidator.validateChannelConfig(config.getConfig("slacks.api.channel.list")).toEither
-      val (channels, validationErrors) = getChannelListing(parsedConfig).run(token)
+      val (channels, validationErrors) = getChannelListing(parsedConfig)(fakeService).run(token)
       channels.size == 0 && validationErrors.size >= 1
     }
   }
 
   def catchHistoriesConfigErrors = {
-    import SlackFunctions.{httpService ⇒ _, _}
     import scala.concurrent._, duration._
+    import SlackFunctions._
     import slacks.core.config._
-    implicit val fakeService = new FakeChannelHistoryHttpService
+    val fakeService = new FakeChannelHistoryHttpService
     val token = SlackAccessToken(Token("xoxp-","fake"), "channel:list" :: Nil)
 
     import ConfigurationData.arbBadHistoryConfigs
     prop { (config : Config) ⇒
       val parsedConfig = ConfigValidator.validateChannelReadConfig(config.getConfig("slacks.api.channel.read")).toEither
-      val (channels, validationErrors) = getChannelHistory(parsedConfig)("fake-channel-id", 2 second).run(token)
+      val (channels, validationErrors) = getChannelHistory(parsedConfig)("fake-channel-id", 2 second)(fakeService).run(token)
       channels.size == 0 && validationErrors.size >= 1
     }
   }
 
   def getChannelListingWhenAllIsGood = {
-    import SlackFunctions.{httpService ⇒ _, _}
     import scala.concurrent._, duration._
+    import SlackFunctions._
     import slacks.core.config._
 
-    implicit val fakeService = new FakeChannelListingHttpService
+    val fakeService = new FakeChannelListingHttpService
     val token = SlackAccessToken(Token("xoxp-","fake"), "channel:list" :: Nil)
-    val (channels, loginfo) = getChannelListing(Config.channelListConfig).run(token)
+    val (channels, loginfo) = getChannelListing(Config.channelListConfig)(fakeService).run(token)
     channels.size > 0
   }
 
   def getChannelListingWhenAllIsNotGood = {
-    import SlackFunctions.{httpService ⇒ _,  _}
     import scala.concurrent._, duration._
+    import SlackFunctions._
     import slacks.core.config._
 
-    implicit val fakeService = new FakeChannelListingErrorHttpService
+    val fakeService = new FakeChannelListingErrorHttpService
     val token = SlackAccessToken(Token("xoxp-","fake"), "channel:list" :: Nil)
-    val (channels, loginfo) = getChannelListing(Config.channelListConfig).run(token)
+    val (channels, loginfo) = getChannelListing(Config.channelListConfig)(fakeService).run(token)
     channels.size == 0
   }
 
   def getChannelHistoryWhenAllIsGood = {
-    import SlackFunctions.{httpService ⇒ _, _}
     import scala.concurrent._, duration._
+    import SlackFunctions._
     import slacks.core.config._
 
-    implicit val fakeService = new FakeChannelHistoryHttpService
+    val fakeService = new FakeChannelHistoryHttpService
     val token = SlackAccessToken(Token("xoxp-","fake"), "channel:list" :: Nil)
-    val (channels, loginfo) = getChannelHistory(Config.channelReadConfig)("fake-channel-id", 2 second).run(token)
+    val (channels, loginfo) = getChannelHistory(Config.channelReadConfig)("fake-channel-id", 2 second)(fakeService).run(token)
     channels.size > 0
   }
 
   def getChannelHistoryWhenAllIsNotGood = {
-    import SlackFunctions.{httpService ⇒ _,  _}
     import scala.concurrent._, duration._
+    import SlackFunctions._
     import slacks.core.config._
 
-    implicit val fakeService = new FakeChannelHistoryErrorHttpService
+    val fakeService = new FakeChannelHistoryErrorHttpService
     val token = SlackAccessToken(Token("xoxp-","fake"), "channel:list" :: Nil)
-    val (channels, loginfo) = getChannelHistory(Config.channelReadConfig)("fake-channel-id", 2 second).run(token)
+    val (channels, loginfo) = getChannelHistory(Config.channelReadConfig)("fake-channel-id", 2 second)(fakeService).run(token)
     channels.size == 0
   }
 

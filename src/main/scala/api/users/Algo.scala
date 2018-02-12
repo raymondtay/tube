@@ -7,6 +7,7 @@ import org.apache.flink.streaming.api.functions.sink._
 import nugit.tube.api.SlackFunctions._
 import cats.data.Validated._
 import slacks.core.config._
+import slacks.core.program.HttpService
 import providers.slack.models._
 import akka.actor._
 import akka.stream._
@@ -40,10 +41,11 @@ trait UsersAlgos {
                              cerebroConfig : CerebroSeedUsersConfig,
                              gatewayConfig : ApiGatewayConfig,
                              env: StreamExecutionEnvironment)
+                            (httpService : HttpService)
                             (implicit actorSystem : ActorSystem, actorMaterializer : ActorMaterializer) : Reader[SlackAccessToken[String], Option[(List[User], List[String])]] = Reader{ (token: SlackAccessToken[String]) ⇒
 
-    val (teamId, teamLogs) = retrieveTeam(teamInfoCfg).run(token)
-    val (users, logs) = retrieveAllUsers(config, timeout).run(token)
+    val (teamId, teamLogs) = retrieveTeam(teamInfoCfg)(httpService).run(token)
+    val (users, logs) = retrieveAllUsers(config)(httpService).run(token)
 
     users match {
       case Nil ⇒ ((users, logs)).some

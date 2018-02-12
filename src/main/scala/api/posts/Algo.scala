@@ -13,7 +13,6 @@ import cats._, data._, implicits._
 import cats.data.Validated._
 
 import slacks.core.program.HttpService
-import nugit.tube.api.Implicits
 import nugit.tube.api.SlackFunctions._
 import nugit.routes._
 import nugit.tube.configuration.{ApiGatewayConfig, ConfigValidator,CerebroSeedPostsConfig}
@@ -22,7 +21,7 @@ import slacks.core.program.SievedMessages
 import providers.slack.models._
 
 
-trait PostsAlgos extends Implicits {
+trait PostsAlgos {
 
   /**
     * Demonstration of retrieving all posts and how this works is:
@@ -48,10 +47,11 @@ trait PostsAlgos extends Implicits {
                              cerebroConfig : CerebroSeedPostsConfig,
                              gatewayConfig : ApiGatewayConfig,
                              env: StreamExecutionEnvironment)
-                            (implicit actorSystem : ActorSystem, actorMaterializer : ActorMaterializer, httpService : HttpService) : Reader[SlackAccessToken[String], Option[(List[(String, Option[SievedMessages])], List[String])]] = Reader{ (token: SlackAccessToken[String]) ⇒
+                            (httpService : HttpService)
+                            (implicit actorSystem : ActorSystem, actorMaterializer : ActorMaterializer) : Reader[SlackAccessToken[String], Option[(List[(String, Option[SievedMessages])], List[String])]] = Reader{ (token: SlackAccessToken[String]) ⇒
 
-    val (teamId, teamLogs) = retrieveTeam(teamInfoCfg).run(token)
-    val (channels, logs) = getChannelListing(Config.channelListConfig).run(token)
+    val (teamId, teamLogs) = retrieveTeam(teamInfoCfg)(httpService).run(token)
+    val (channels, logs) = getChannelListing(Config.channelListConfig)(httpService).run(token)
 
     channels match {
       case Nil ⇒ none

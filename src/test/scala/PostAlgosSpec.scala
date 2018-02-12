@@ -38,8 +38,9 @@ class PostsAlgosSpecs extends mutable.Specification with ScalaCheck with AfterAl
     val channelId = "fake-channel-id"
     val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
 
+    val fakeService = new FakeChannelConversationHistoryHttpService 
     val (channelPosts, logs) =
-      getChannelConversationHistory(slacks.core.config.Config.channelReadConfig)(channelId).run(token)
+      getChannelConversationHistory(slacks.core.config.Config.channelReadConfig)(channelId)(fakeService).run(token)
 
     channelPosts.channel must_==(channelId)
     channelPosts.posts.botMessages.size must be_==(0)

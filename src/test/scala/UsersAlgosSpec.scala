@@ -30,10 +30,12 @@ class UsersAlgosSpecs extends mutable.Specification with ScalaCheck with AfterAl
   def emptyCollectionWhenTokenInvalid = {
     val token = SlackAccessToken(Token("xoxp-","fake"), "channel:list" :: Nil)
 
+    implicit val httpService = new nugit.tube.api.FakeGetAllUsersHttpService
+
     val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
     (nugit.tube.configuration.ConfigValidator.loadCerebroConfig(Config.config).toOption : @unchecked) match {
       case Some(cerebroConfig) ⇒
-        (runSeedSlackUsersGraph(Config.teamInfoConfig, Config.usersListConfig, cerebroConfig.seedUsersCfg, cerebroConfig.apiGatewayCfg, env).run(token) : @unchecked) match {
+        (runSeedSlackUsersGraph(Config.teamInfoConfig, Config.usersListConfig, cerebroConfig.seedUsersCfg, cerebroConfig.apiGatewayCfg, env)(httpService).run(token) : @unchecked) match {
           case Some((users, logs)) ⇒ users.size must_== 0
         }
     }
