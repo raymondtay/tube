@@ -9,6 +9,7 @@ import cats.data.Validated._
 import slacks.core.config._
 import slacks.core.program.HttpService
 import providers.slack.models._
+import providers.slack.algebra.TeamId
 import akka.actor._
 import akka.stream._
 import cats._, data._, implicits._
@@ -29,14 +30,15 @@ trait UsersAlgos {
     *     `RestartStrategy` in Flink.
     *     Once data is sunk, it is considered "gone" and we would return None.
     *
-    * @env StreamExecutionEnvironment instance
-    * @config configuration for retrieving slack via REST
-    * @cerebroConfig configuration that reveals where cerebro is hosted
-    * @actorSystem  (environment derived)
-    * @actorMaterializer (environment derived)
-    * @token slack token
+    * @param teamId some team id
+    * @param env StreamExecutionEnvironment instance
+    * @param config configuration for retrieving slack via REST
+    * @param cerebroConfig configuration that reveals where cerebro is hosted
+    * @param actorSystem  (environment derived)
+    * @param actorMaterializer (environment derived)
+    * @param token slack token
     */
-  def runSeedSlackUsersGraph(teamInfoCfg: NonEmptyList[ConfigValidation] Either SlackTeamInfoConfig[String],
+  def runSeedSlackUsersGraph(teamId : TeamId,
                              config: NonEmptyList[ConfigValidation] Either SlackUsersListConfig[String],
                              cerebroConfig : CerebroSeedUsersConfig,
                              gatewayConfig : ApiGatewayConfig,
@@ -44,7 +46,6 @@ trait UsersAlgos {
                             (httpService : HttpService)
                             (implicit actorSystem : ActorSystem, actorMaterializer : ActorMaterializer) : Reader[SlackAccessToken[String], Option[(List[User], List[String])]] = Reader{ (token: SlackAccessToken[String]) ⇒
 
-    val (teamId, teamLogs) = retrieveTeam(teamInfoCfg)(httpService).run(token)
     val (users, logs) = retrieveAllUsers(config)(httpService).run(token)
 
     users match {
@@ -53,7 +54,7 @@ trait UsersAlgos {
         env.fromCollection(users :: Nil).addSink(new UserSink(teamId, cerebroConfig, gatewayConfig))
         env.execute("cerebro-seed-slack-users")
         /* NOTE: be aware that RTEs can be thrown here */
-        none
+        ((users,logs)).some
     }
   }
 }

@@ -1,6 +1,9 @@
 package nugit.tube.api
 
 
+import org.slf4j.{Logger, LoggerFactory}
+
+
 object SlackFunctions {
   import cats._, data._, implicits._
   import scala.concurrent.duration._
@@ -18,6 +21,8 @@ object SlackFunctions {
   import org.atnos.eff.syntax.future._
   import nugit.tube.api.model.ChannelPosts
 
+
+  val logger = LoggerFactory.getLogger(getClass)
 
   /**
     * API to retrieve Team info with the given access token; this conflates
@@ -38,16 +43,27 @@ object SlackFunctions {
 
     implicit val scheduler = ExecutorServices.schedulerFromGlobalExecutionContext
 
-    def onError(teamId: TeamId) = Reader{ (e: io.circe.DecodingFailure) ⇒ ((teamId, Team("", "", "", "", Nil)), e.message :: Nil)}
-    def onSuccess(logs: List[String])(teamId: TeamId) = Reader{ (team: Team) ⇒ ((teamId, team), logs) }
+    def onError(teamId: TeamId) =
+      Reader{ (e: io.circe.DecodingFailure) ⇒ 
+        logger.error(s"[retrieveTeamInfo] Unable to decode json with details: ${e}")
+        ((teamId, Team("", "", "", "", Nil)), e.message :: Nil)
+      }
+    def onSuccess(logs: List[String])(teamId: TeamId) =
+      Reader{ (team: Team) ⇒ 
+        logger.info(s"[retrieveTeamInfo] Appears to be successful.")
+        ((teamId, team), logs)
+      }
 
     (emojiListCfg, teamInfoCfg) match {
       case (Right(emojiListCfg),Right(teamInfoCfg)) ⇒
         val timeout = Monoid[Long].combine(emojiListCfg.timeout, teamInfoCfg.timeout) seconds
         val ((teamId, minedResults), logInfo) =
           Await.result( getTeamInfo(teamInfoCfg, emojiListCfg, httpService).runReader(accessToken).runWriter.runSequential, timeout)
-        minedResults.bimap(onError(teamId).run, onSuccess(logInfo)(teamId).run).toOption.get /* guarantee not to vomit. */
 
+        minedResults.bimap(onError(teamId).run, onSuccess(logInfo)(teamId).run).toOption match {
+          case Some(d) ⇒ d
+          case None ⇒ (("", Team("", "", "", "", Nil)), Nil)
+        }
       case (Right(_), Left(teamInfoErrors)) ⇒ (("",Team("","","","",Nil)), teamInfoErrors.toList.map(_.errorMessage))
       case (Left(emojiErrors), Right(_)) ⇒ (("",Team("","","","",Nil)), emojiErrors.toList.map(_.errorMessage))
       case (Left(emojiErrors), Left(teamInfoErrors)) ⇒ (("",Team("","","","",Nil)), teamInfoErrors.toList.map(_.errorMessage) ++ emojiErrors.toList.map(_.errorMessage))
@@ -100,9 +116,9 @@ object SlackFunctions {
       case Right(cfg) ⇒
         val timeout = cfg.timeout seconds
         val (retrievedUsers, logInfo) =
-          Await.result(
-            getAllUsers(cfg, httpService).
-              runReader(accessToken).runWriter.runSequential, timeout)
+           Await.result(
+             getAllUsers(cfg, httpService).
+               runReader(accessToken).runWriter.runSequential, timeout)
         (retrievedUsers.users, logInfo)
       case Left(validationErrors)  ⇒ (Nil, validationErrors.toList.map(_.errorMessage))
     }

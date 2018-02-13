@@ -29,13 +29,14 @@ trait TeamAlgos {
     *     `RestartStrategy` in Flink.
     *     Once data is sunk, it is considered "gone" and we would return None.
     *
-    * @env StreamExecutionEnvironment instance
-    * @teaminfoConfig configuration for retrieving slack via REST
-    * @emojiListConfig configuration for retrieving slack via REST
-    * @cerebroConfig configuration that reveals where cerebro is hosted
-    * @actorSystem  (environment derived)
-    * @actorMaterializer (environment derived)
-    * @token slack token
+    * @param teamId some team id
+    * @param env StreamExecutionEnvironment instance
+    * @param teaminfoConfig configuration for retrieving slack via REST
+    * @param emojiListConfig configuration for retrieving slack via REST
+    * @param cerebroConfig configuration that reveals where cerebro is hosted
+    * @param actorSystem  (environment derived)
+    * @param actorMaterializer (environment derived)
+    * @param token slack token
     */
   def runGetSlackTeamInfo(teamInfoCfg: NonEmptyList[ConfigValidation] Either SlackTeamInfoConfig[String],
                           emojiListCfg: NonEmptyList[ConfigValidation] Either SlackEmojiListConfig[String],
@@ -50,7 +51,8 @@ trait TeamAlgos {
     env.fromCollection(minedResults :: Nil).addSink(new TeamSink(teamId, cerebroConfig, gatewayConfig))
     env.execute("cerebro-seed-slack-users")
     /* NOTE: be aware that RTEs can be thrown here */
-    none
+
+    ((minedResults, logs)).some
   }
 
 }

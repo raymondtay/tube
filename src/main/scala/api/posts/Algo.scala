@@ -19,6 +19,7 @@ import nugit.tube.configuration.{ApiGatewayConfig, ConfigValidator,CerebroSeedPo
 import slacks.core.config._
 import slacks.core.program.SievedMessages
 import providers.slack.models._
+import providers.slack.algebra.TeamId
 
 
 trait PostsAlgos {
@@ -41,7 +42,7 @@ trait PostsAlgos {
     * @param actorMaterializer (environment derived)
     * @param token slack token
     */
-  def runSeedSlackPostsGraph(teamInfoCfg: NonEmptyList[ConfigValidation] Either SlackTeamInfoConfig[String],
+  def runSeedSlackPostsGraph(teamId : TeamId,
                              config: NonEmptyList[ConfigValidation] Either SlackChannelListConfig[String],
                              slackReadCfg: NonEmptyList[ConfigValidation] Either SlackChannelReadConfig[String],
                              cerebroConfig : CerebroSeedPostsConfig,
@@ -50,7 +51,6 @@ trait PostsAlgos {
                             (httpService : HttpService)
                             (implicit actorSystem : ActorSystem, actorMaterializer : ActorMaterializer) : Reader[SlackAccessToken[String], Option[(List[(String, Option[SievedMessages])], List[String])]] = Reader{ (token: SlackAccessToken[String]) ⇒
 
-    val (teamId, teamLogs) = retrieveTeam(teamInfoCfg)(httpService).run(token)
     val (channels, logs) = getChannelListing(Config.channelListConfig)(httpService).run(token)
 
     channels match {

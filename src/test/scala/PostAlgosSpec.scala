@@ -15,6 +15,7 @@ import com.typesafe.config._
 import akka.actor._
 import akka.stream._
 
+import nugit.tube.api.FakeChannelConversationHistoryErrorHttpService
 import nugit.tube.api.SlackFunctions._
 import slacks.core.models.Token
 import slacks.core.program.SievedMessages
@@ -36,11 +37,12 @@ class PostsAlgosSpecs extends mutable.Specification with ScalaCheck with AfterAl
   def emptyCollectionWhenTokenInvalid = {
     val token = SlackAccessToken(Token("xoxp-","aaa"), "channel:list" :: Nil)
     val channelId = "fake-channel-id"
+    val fakeTeamId = "TEAM-1234"
+    val httpService = new FakeChannelConversationHistoryErrorHttpService 
     val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
 
-    val fakeService = new FakeChannelConversationHistoryHttpService 
     val (channelPosts, logs) =
-      getChannelConversationHistory(slacks.core.config.Config.channelReadConfig)(channelId)(fakeService).run(token)
+      getChannelConversationHistory(slacks.core.config.Config.channelReadConfig)(channelId)(httpService).run(token)
 
     channelPosts.channel must_==(channelId)
     channelPosts.posts.botMessages.size must be_==(0)
@@ -51,15 +53,17 @@ class PostsAlgosSpecs extends mutable.Specification with ScalaCheck with AfterAl
   def nothingWhenTokenInvalid = {
     val token = SlackAccessToken(Token("xoxp-","aaa"), "channel:list" :: Nil)
     val channelId = "fake-channel-id"
+    val fakeTeamId = "TEAM-1234"
+    val httpService = new FakeChannelConversationHistoryErrorHttpService 
     val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
 
     (nugit.tube.configuration.ConfigValidator.loadCerebroConfig(nugit.tube.configuration.Config.config).toOption : @unchecked) match {
       case Some(cerebroConfig) ⇒
-        runSeedSlackPostsGraph(slacks.core.config.Config.teamInfoConfig,
+        runSeedSlackPostsGraph(fakeTeamId,
                                slacks.core.config.Config.channelListConfig,
                                slacks.core.config.Config.channelReadConfig,
                                cerebroConfig.seedPostsCfg,
-                               cerebroConfig.apiGatewayCfg, env).run(token) must beNone
+                               cerebroConfig.apiGatewayCfg, env)(httpService).run(token) must beNone
     }
   }
 

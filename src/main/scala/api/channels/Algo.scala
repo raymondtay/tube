@@ -11,6 +11,7 @@ import cats.data.Validated._
 import slacks.core.config.{Config, ConfigValidation, SlackTeamInfoConfig, SlackChannelListConfig}
 import slacks.core.program.{HttpService, RealHttpService}
 import providers.slack.models._
+import providers.slack.algebra.TeamId
 import akka.actor._
 import akka.stream._
 import cats._, data._, implicits._
@@ -27,15 +28,15 @@ trait ChannelAlgos {
     *     necessary so that Flink recognizes it and restarts it based on the
     *     `RestartStrategy` in Flink.
     *     Once data is sunk, it is considered "gone" and we would return None.
-    *
-    * @env StreamExecutionEnvironment instance
-    * @config configuration for retrieving slack via REST
-    * @cerebroConfig configuration that reveals where cerebro is hosted
-    * @actorSystem  (environment derived)
-    * @actorMaterializer (environment derived)
-    * @token slack token
+    * @param teamId some kind of team Id
+    * @param env StreamExecutionEnvironment instance
+    * @param config configuration for retrieving slack via REST
+    * @param cerebroConfig configuration that reveals where cerebro is hosted
+    * @param actorSystem  (environment derived)
+    * @param actorMaterializer (environment derived)
+    * @param token slack token
     */
-  def runSeedSlackChannelsGraph(teamInfoCfg: NonEmptyList[ConfigValidation] Either SlackTeamInfoConfig[String],
+  def runSeedSlackChannelsGraph(teamId: TeamId,
                     config: NonEmptyList[ConfigValidation] Either SlackChannelListConfig[String],
                     cerebroConfig : CerebroSeedChannelsConfig,
                     gatewayConfig : ApiGatewayConfig,
@@ -43,7 +44,6 @@ trait ChannelAlgos {
                     (httpService : HttpService)
                    (implicit actorSystem : ActorSystem, actorMaterializer : ActorMaterializer) : Reader[SlackAccessToken[String], Option[(List[SlackChannel], List[String])]] = Reader{ (token: SlackAccessToken[String]) ⇒
 
-    val (teamId, teamLogs) = retrieveTeam(teamInfoCfg)(httpService).run(token)
     val (channels, logs) = getChannelListing(Config.channelListConfig)(httpService).run(token)
 
     channels match {
@@ -52,18 +52,18 @@ trait ChannelAlgos {
         env.fromCollection(channels :: Nil).addSink(new ChannelSink(teamId, cerebroConfig, gatewayConfig))
         env.execute("cerebro-seed-slack-channels")
         /* NOTE: be aware that RTEs can be thrown here */
-        none
+        ((channels, logs)).some
     }
   }
 
   /**
     * Split slack based on a partition-function
-    * @config channel configuration
-    * @partitionFunction split-function
-    * @env StreamExecutionEnvironment instance
-    * @actorSystem  (environment derived)
-    * @actorMaterializer (environment derived)
-    * @token slack token
+    * @param config channel configuration
+    * @param partitionFunction split-function
+    * @param env StreamExecutionEnvironment instance
+    * @param actorSystem  (environment derived)
+    * @param actorMaterializer (environment derived)
+    * @param token slack token
     */
   def retrieveChannels(config: NonEmptyList[ConfigValidation] Either SlackChannelListConfig[String],
                        partitionFunction : SlackChannel ⇒ Boolean,
@@ -105,12 +105,12 @@ trait ChannelAlgos {
 
   /**
     * Demonstration of channel sieving
-    * @config channel configuration
-    * @partitionFunction split-function
-    * @env StreamExecutionEnvironment instance
-    * @actorSystem  (environment derived)
-    * @actorMaterializer (environment derived)
-    * @token slack token
+    * @param config channel configuration
+    * @param partitionFunction split-function
+    * @param env StreamExecutionEnvironment instance
+    * @param actorSystem  (environment derived)
+    * @param actorMaterializer (environment derived)
+    * @param token slack token
     */
   def displayChannels(config: NonEmptyList[ConfigValidation] Either SlackChannelListConfig[String],
                       partitionFunction : SlackChannel ⇒ Boolean,
