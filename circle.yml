@@ -30,7 +30,8 @@ dependencies:
 
 test:
   override:
-    - sbt coverageOn test coverageReport
+    - sbt coverageOn clean test
+    - sbt coverageReport
   post:
     - mkdir -p $CIRCLE_ARTIFACTS/scala-2.11
     - mv target/scala-2.11/coverage-report  $CIRCLE_ARTIFACTS/scala-2.11/coverage-report
