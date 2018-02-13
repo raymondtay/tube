@@ -32,6 +32,11 @@ lazy val tube = (project in file(".")).dependsOn(slacks)
 
 enablePlugins(JavaServerAppPackaging)
 
+// disable running all tests in paralle - its becoming a problem on CircleCI's
+// instances as the node's compute capacity is significantly lower than the
+// author's workstation.
+parallelExecution in Test := false
+
 // make run command include the provided dependencies
 run in Compile := Defaults.runTask(fullClasspath in Compile,
                                    mainClass in (Compile, run),
