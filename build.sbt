@@ -32,22 +32,25 @@ lazy val tube = (project in file(".")).dependsOn(slacks)
 
 enablePlugins(JavaServerAppPackaging)
 
-concurrentRestrictions in Global := Tags.limit(Tags.ForkedTestGroup, 4) :: Nil
+// All tests are run sequentially
+parallelExecution in Test := false
 
-import Tests._
-def groupByFirst(tests: Seq[TestDefinition]) =
-  tests groupBy (_.name.contains("Sink")) map {
-    case (true, tests) ⇒
-      val options = ForkOptions().withRunJVMOptions(Vector("-D-J-Xmx3072m"))
-      new Group("FlinkTests", tests, SubProcess(options))
-    case (false, tests) ⇒
-      val options = ForkOptions().withRunJVMOptions(Vector("-D-J-Xmx1536m"))
-      new Group("NonFlinkTests", tests, SubProcess(options))
-  } toSeq
-
-testGrouping in Test := groupByFirst( (definedTests in Test).value )
-
-testForkedParallel in Test := true
+// concurrentRestrictions in Global := Tags.limit(Tags.ForkedTestGroup, 4) :: Nil
+// 
+// import Tests._
+// def groupByFirst(tests: Seq[TestDefinition]) =
+//   tests groupBy (_.name.contains("Sink")) map {
+//     case (true, tests) ⇒
+//       val options = ForkOptions().withRunJVMOptions(Vector("-D-J-Xmx3072m"))
+//       new Group("FlinkTests", tests, SubProcess(options))
+//     case (false, tests) ⇒
+//       val options = ForkOptions().withRunJVMOptions(Vector("-D-J-Xmx1536m"))
+//       new Group("NonFlinkTests", tests, SubProcess(options))
+//   } toSeq
+// 
+// testGrouping in Test := groupByFirst( (definedTests in Test).value )
+// 
+// testForkedParallel in Test := true
 
 // make run command include the provided dependencies
 run in Compile := Defaults.runTask(fullClasspath in Compile,
