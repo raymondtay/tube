@@ -7,6 +7,9 @@ import org.apache.flink.api.common.time.Time
 import org.apache.flink.api.common.restartstrategy._
 import org.apache.flink.streaming.api.environment.CheckpointConfig
 import nugit.routes._
+import slacks.core.program.RealHttpService
+import providers.slack.algebra.TeamId
+import nugit.tube.api.SlackFunctions
 import nugit.tube.api.channels._
 import nugit.tube.api.posts._
 import nugit.tube.api.users._
@@ -89,37 +92,46 @@ object Main extends ChannelAlgos with UsersAlgos with PostsAlgos with TeamAlgos 
 
     implicit val actorSystem = ActorSystem("TubeActorSystem")
     implicit val actorMaterializer = ActorMaterializer()
+    val httpService = new RealHttpService
 
 
     // Load configuration which contains the whereabouts of cerebro and
     // transmit the data over.
     nugit.tube.configuration.ConfigValidator.loadCerebroConfig(Config.config).toOption match {
       case Some(cerebroConfig) ⇒
+
+        val (teamId, teamLogs) = SlackFunctions.retrieveTeam(Config.teamInfoConfig)(httpService).run(SlackAccessToken(commandlineCfg.token.get, Nil))
+        
+        if (teamId.isEmpty) {
+          println("Failed to retrieve the identifier of this team associated with the token; not proceeding further.")
+          System.exit(-1)
+        }
+
         if (commandlineCfg.job_type == JobTypes.seed_users)
-          runSeedSlackUsersGraph(Config.teamInfoConfig,
+          runSeedSlackUsersGraph(teamId,
                                  Config.usersListConfig,
                                  cerebroConfig.seedUsersCfg,
                                  cerebroConfig.apiGatewayCfg,
-                                 env).run(SlackAccessToken(commandlineCfg.token.get, Nil))
+                                 env)(httpService).run(SlackAccessToken(commandlineCfg.token.get, Nil))
         if (commandlineCfg.job_type == JobTypes.seed_channels)
-          runSeedSlackChannelsGraph(Config.teamInfoConfig,
+          runSeedSlackChannelsGraph(teamId,
                                     Config.channelListConfig,
                                     cerebroConfig.seedChannelsCfg,
                                     cerebroConfig.apiGatewayCfg,
-                                    env).run(SlackAccessToken(commandlineCfg.token.get, Nil))
+                                    env)(httpService).run(SlackAccessToken(commandlineCfg.token.get, Nil))
         if (commandlineCfg.job_type == JobTypes.seed_posts)
-          runSeedSlackPostsGraph(Config.teamInfoConfig,
+          runSeedSlackPostsGraph(teamId,
                                  Config.channelListConfig,
                                  Config.channelReadConfig,
                                  cerebroConfig.seedPostsCfg,
                                  cerebroConfig.apiGatewayCfg,
-                                 env).run(SlackAccessToken(commandlineCfg.token.get, Nil))
+                                 env)(httpService).run(SlackAccessToken(commandlineCfg.token.get, Nil))
         if (commandlineCfg.job_type == JobTypes.team_info)
           runGetSlackTeamInfo(Config.teamInfoConfig,
                               Config.emojiListConfig,
                               cerebroConfig.teamInfoCfg,
                               cerebroConfig.apiGatewayCfg,
-                              env).run(SlackAccessToken(commandlineCfg.token.get, Nil))
+                              env)(httpService).run(SlackAccessToken(commandlineCfg.token.get, Nil))
  
       case None ⇒
         println("Cerebro's configuration is borked. Exiting.")

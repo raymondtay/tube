@@ -9,7 +9,9 @@ import nugit.tube.api.SlackFunctions._
 import nugit.tube.configuration.{ApiGatewayConfig, CerebroSeedChannelsConfig}
 import cats.data.Validated._
 import slacks.core.config.{Config, ConfigValidation, SlackTeamInfoConfig, SlackChannelListConfig}
+import slacks.core.program.{HttpService, RealHttpService}
 import providers.slack.models._
+import providers.slack.algebra.TeamId
 import akka.actor._
 import akka.stream._
 import cats._, data._, implicits._
@@ -26,23 +28,23 @@ trait ChannelAlgos {
     *     necessary so that Flink recognizes it and restarts it based on the
     *     `RestartStrategy` in Flink.
     *     Once data is sunk, it is considered "gone" and we would return None.
-    *
-    * @env StreamExecutionEnvironment instance
-    * @config configuration for retrieving slack via REST
-    * @cerebroConfig configuration that reveals where cerebro is hosted
-    * @actorSystem  (environment derived)
-    * @actorMaterializer (environment derived)
-    * @token slack token
+    * @param teamId some kind of team Id
+    * @param env StreamExecutionEnvironment instance
+    * @param config configuration for retrieving slack via REST
+    * @param cerebroConfig configuration that reveals where cerebro is hosted
+    * @param actorSystem  (environment derived)
+    * @param actorMaterializer (environment derived)
+    * @param token slack token
     */
-  def runSeedSlackChannelsGraph(teamInfoCfg: NonEmptyList[ConfigValidation] Either SlackTeamInfoConfig[String],
+  def runSeedSlackChannelsGraph(teamId: TeamId,
                     config: NonEmptyList[ConfigValidation] Either SlackChannelListConfig[String],
                     cerebroConfig : CerebroSeedChannelsConfig,
                     gatewayConfig : ApiGatewayConfig,
                     env: StreamExecutionEnvironment)
+                    (httpService : HttpService)
                    (implicit actorSystem : ActorSystem, actorMaterializer : ActorMaterializer) : Reader[SlackAccessToken[String], Option[(List[SlackChannel], List[String])]] = Reader{ (token: SlackAccessToken[String]) ⇒
 
-    val (teamId, teamLogs) = retrieveTeam(teamInfoCfg).run(token)
-    val (channels, logs) = getChannelListing(Config.channelListConfig).run(token)
+    val (channels, logs) = getChannelListing(Config.channelListConfig)(httpService).run(token)
 
     channels match {
       case Nil ⇒ ((channels, logs)).some
@@ -50,30 +52,31 @@ trait ChannelAlgos {
         env.fromCollection(channels :: Nil).addSink(new ChannelSink(teamId, cerebroConfig, gatewayConfig))
         env.execute("cerebro-seed-slack-channels")
         /* NOTE: be aware that RTEs can be thrown here */
-        none
+        ((channels, logs)).some
     }
   }
 
   /**
     * Split slack based on a partition-function
-    * @config channel configuration
-    * @partitionFunction split-function
-    * @env StreamExecutionEnvironment instance
-    * @actorSystem  (environment derived)
-    * @actorMaterializer (environment derived)
-    * @token slack token
+    * @param config channel configuration
+    * @param partitionFunction split-function
+    * @param env StreamExecutionEnvironment instance
+    * @param actorSystem  (environment derived)
+    * @param actorMaterializer (environment derived)
+    * @param token slack token
     */
   def retrieveChannels(config: NonEmptyList[ConfigValidation] Either SlackChannelListConfig[String],
                        partitionFunction : SlackChannel ⇒ Boolean,
                        windowSize : Time,
                        slideTime : Time,
                        env: StreamExecutionEnvironment)
+                      (httpService : HttpService)
                       (implicit actorSystem : ActorSystem, actorMaterializer : ActorMaterializer) = Reader{ (token: SlackAccessToken[String]) ⇒
 
     val channelNameA = "more than or equal to 5 members"
     val channelNameB = "less than 5 members"
 
-    val (channels, logs) = getChannelListing(Config.channelListConfig).run(token)
+    val (channels, logs) = getChannelListing(Config.channelListConfig)(httpService).run(token)
 
     println(s"Total number of channels: ${channels.size}")
 
@@ -102,22 +105,23 @@ trait ChannelAlgos {
 
   /**
     * Demonstration of channel sieving
-    * @config channel configuration
-    * @partitionFunction split-function
-    * @env StreamExecutionEnvironment instance
-    * @actorSystem  (environment derived)
-    * @actorMaterializer (environment derived)
-    * @token slack token
+    * @param config channel configuration
+    * @param partitionFunction split-function
+    * @param env StreamExecutionEnvironment instance
+    * @param actorSystem  (environment derived)
+    * @param actorMaterializer (environment derived)
+    * @param token slack token
     */
   def displayChannels(config: NonEmptyList[ConfigValidation] Either SlackChannelListConfig[String],
                       partitionFunction : SlackChannel ⇒ Boolean,
                       env: StreamExecutionEnvironment)
+                     (httpService : HttpService)
                      (implicit actorSystem : ActorSystem, actorMaterializer : ActorMaterializer) = Reader{ (token: SlackAccessToken[String]) ⇒
 
     val channelNameA = "more than or equal to 5 members"
     val channelNameB = "less than 5 members"
 
-    val (channels, logs) = getChannelListing(config).run(token)
+    val (channels, logs) = getChannelListing(config)(httpService).run(token)
     println(s"Total number of channels: ${channels.size}")
     channels.map(c => println(c.id+","+c.name))
     val channelsEnv = env.fromCollection(channels)

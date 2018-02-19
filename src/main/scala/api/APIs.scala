@@ -1,11 +1,10 @@
 package nugit.tube.api
 
-trait Implicits {
-  import slacks.core.program._
-  implicit val httpService = new RealHttpService
-}
 
-object SlackFunctions extends Implicits {
+import org.slf4j.{Logger, LoggerFactory}
+
+
+object SlackFunctions {
   import cats._, data._, implicits._
   import scala.concurrent.duration._
   import akka.actor._
@@ -22,9 +21,8 @@ object SlackFunctions extends Implicits {
   import org.atnos.eff.syntax.future._
   import nugit.tube.api.model.ChannelPosts
 
-  // Test tokens, do not use in PRODUCTION
-  val testToken = SlackAccessToken(Token("xoxp-","2169191837-242649061349-267955267123-5e965193f448a1ccbb3bbf6f97083f78"), "channel:list" :: Nil)
-  val timeout : Duration = 9 seconds
+
+  val logger = LoggerFactory.getLogger(getClass)
 
   /**
     * API to retrieve Team info with the given access token; this conflates
@@ -35,7 +33,8 @@ object SlackFunctions extends Implicits {
     */
   def retrieveTeamInfo(teamInfoCfg: NonEmptyList[ConfigValidation] Either SlackTeamInfoConfig[String],
                        emojiListCfg: NonEmptyList[ConfigValidation] Either SlackEmojiListConfig[String])
-                       (implicit actorSystem : ActorSystem, actorMat : ActorMaterializer, httpService : HttpService)
+                       (httpService : HttpService)
+                       (implicit actorSystem : ActorSystem, actorMat : ActorMaterializer)
                        : Reader[SlackAccessToken[String], ((TeamId, Team), List[String])] =  Reader { (accessToken: SlackAccessToken[String]) ⇒
     import scala.concurrent._, duration._
     import slacks.core.config.Config
@@ -44,16 +43,27 @@ object SlackFunctions extends Implicits {
 
     implicit val scheduler = ExecutorServices.schedulerFromGlobalExecutionContext
 
-    def onError(teamId: TeamId) = Reader{ (e: io.circe.DecodingFailure) ⇒ ((teamId, Team("", "", "", "", Nil)), e.message :: Nil)}
-    def onSuccess(logs: List[String])(teamId: TeamId) = Reader{ (team: Team) ⇒ ((teamId, team), logs) }
+    def onError(teamId: TeamId) =
+      Reader{ (e: io.circe.DecodingFailure) ⇒ 
+        logger.error(s"[retrieveTeamInfo] Unable to decode json with details: ${e}")
+        ((teamId, Team("", "", "", "", Nil)), e.message :: Nil)
+      }
+    def onSuccess(logs: List[String])(teamId: TeamId) =
+      Reader{ (team: Team) ⇒ 
+        logger.info(s"[retrieveTeamInfo] Appears to be successful.")
+        ((teamId, team), logs)
+      }
 
     (emojiListCfg, teamInfoCfg) match {
       case (Right(emojiListCfg),Right(teamInfoCfg)) ⇒
         val timeout = Monoid[Long].combine(emojiListCfg.timeout, teamInfoCfg.timeout) seconds
         val ((teamId, minedResults), logInfo) =
-          Await.result( getTeamInfo(teamInfoCfg, emojiListCfg, new RealHttpService).runReader(accessToken).runWriter.runSequential, timeout)
-        minedResults.bimap(onError(teamId).run, onSuccess(logInfo)(teamId).run).toOption.get /* guarantee not to vomit. */
+          Await.result( getTeamInfo(teamInfoCfg, emojiListCfg, httpService).runReader(accessToken).runWriter.runSequential, timeout)
 
+        minedResults.bimap(onError(teamId).run, onSuccess(logInfo)(teamId).run).toOption match {
+          case Some(d) ⇒ d
+          case None ⇒ (("", Team("", "", "", "", Nil)), Nil)
+        }
       case (Right(_), Left(teamInfoErrors)) ⇒ (("",Team("","","","",Nil)), teamInfoErrors.toList.map(_.errorMessage))
       case (Left(emojiErrors), Right(_)) ⇒ (("",Team("","","","",Nil)), emojiErrors.toList.map(_.errorMessage))
       case (Left(emojiErrors), Left(teamInfoErrors)) ⇒ (("",Team("","","","",Nil)), teamInfoErrors.toList.map(_.errorMessage) ++ emojiErrors.toList.map(_.errorMessage))
@@ -67,7 +77,8 @@ object SlackFunctions extends Implicits {
     * @param token
     */
   def retrieveTeam(teamInfoCfg: NonEmptyList[ConfigValidation] Either SlackTeamInfoConfig[String])
-                  (implicit actorSystem : ActorSystem, actorMat : ActorMaterializer, httpService : HttpService)
+                  (httpService : HttpService)
+                  (implicit actorSystem : ActorSystem, actorMat : ActorMaterializer)
                   : Reader[SlackAccessToken[String], (TeamId, List[String])] =  Reader { (accessToken: SlackAccessToken[String]) ⇒
     import scala.concurrent._, duration._
     import slacks.core.config.Config
@@ -80,7 +91,7 @@ object SlackFunctions extends Implicits {
       case Right(teamInfoCfg) ⇒
         val timeout = teamInfoCfg.timeout seconds
         val (teamId, logs) =
-          Await.result( getTeam(teamInfoCfg, new RealHttpService).runReader(accessToken).runWriter.runSequential, timeout )
+          Await.result( getTeam(teamInfoCfg, httpService).runReader(accessToken).runWriter.runSequential, timeout )
         ((teamId, logs))
       case Left(teamInfoErrors) ⇒ (("", teamInfoErrors.toList.map(_.errorMessage)))
     }
@@ -92,9 +103,9 @@ object SlackFunctions extends Implicits {
     * @param config configuration we are going to use
     * @param timeout how long to wait before timeout
     */
-  def retrieveAllUsers(config: NonEmptyList[ConfigValidation] Either SlackUsersListConfig[String],
-                       timeout : scala.concurrent.duration.Duration)
-                       (implicit actorSystem : ActorSystem, actorMat : ActorMaterializer, httpService : HttpService) : Reader[SlackAccessToken[String], (List[User], List[String])] = Reader { (accessToken: SlackAccessToken[String]) ⇒
+  def retrieveAllUsers(config: NonEmptyList[ConfigValidation] Either SlackUsersListConfig[String])
+                      (httpService : HttpService)
+                      (implicit actorSystem : ActorSystem, actorMat : ActorMaterializer) : Reader[SlackAccessToken[String], (List[User], List[String])] = Reader { (accessToken: SlackAccessToken[String]) ⇒
     import UsersInterpreter._
     import scala.concurrent._, duration._
     import scala.concurrent.ExecutionContext.Implicits.global
@@ -103,10 +114,11 @@ object SlackFunctions extends Implicits {
     import slacks.core.config.Config._
     usersListConfig match { // this tests the configuration loaded in application.conf
       case Right(cfg) ⇒
+        val timeout = cfg.timeout seconds
         val (retrievedUsers, logInfo) =
-          Await.result(
-            getAllUsers(cfg, httpService).
-              runReader(accessToken).runWriter.runSequential, timeout)
+           Await.result(
+             getAllUsers(cfg, httpService).
+               runReader(accessToken).runWriter.runSequential, timeout)
         (retrievedUsers.users, logInfo)
       case Left(validationErrors)  ⇒ (Nil, validationErrors.toList.map(_.errorMessage))
     }
@@ -118,7 +130,8 @@ object SlackFunctions extends Implicits {
     * @param token the slack access token
     */
   def getChannelListing(config: NonEmptyList[ConfigValidation] Either SlackChannelListConfig[String])
-                       (implicit actorSystem : ActorSystem, actorMat : ActorMaterializer, httpService : HttpService)
+                       (httpService : HttpService)
+                       (implicit actorSystem : ActorSystem, actorMat : ActorMaterializer)
                        : Reader[SlackAccessToken[String], (List[SlackChannel], List[String])] = Reader { (token: SlackAccessToken[String]) ⇒
     import ChannelsInterpreter._
     import scala.concurrent._, duration._
@@ -147,6 +160,7 @@ object SlackFunctions extends Implicits {
     */
   def getChannelConversationHistory(config: NonEmptyList[ConfigValidation] Either SlackChannelReadConfig[String])
                                    (channelId: String)
+                                   (httpService : HttpService)
                                    : Reader[SlackAccessToken[String], (ChannelPosts, List[String])] = Reader { (token: SlackAccessToken[String]) ⇒
     import ChannelConversationInterpreter._
     import scala.concurrent._, duration._
@@ -182,7 +196,8 @@ object SlackFunctions extends Implicits {
   @deprecated("To be dropped in favour of 'conversation' APIs")
   def getChannelHistory(config: NonEmptyList[ConfigValidation] Either SlackChannelReadConfig[String])
                        (channelId: String, timeout : scala.concurrent.duration.Duration)
-                       (implicit actorSystem : ActorSystem, actorMat : ActorMaterializer, httpService : HttpService)
+                       (httpService : HttpService)
+                       (implicit actorSystem : ActorSystem, actorMat : ActorMaterializer)
                        : Reader[SlackAccessToken[String], (List[Message], List[String])] = Reader { (token: SlackAccessToken[String]) ⇒
     import ChannelConversationInterpreter._
     import scala.concurrent._, duration._
@@ -192,6 +207,7 @@ object SlackFunctions extends Implicits {
     import slacks.core.config.Config
     config match {
       case Right(cfg) ⇒
+        val timeout = cfg.timeout seconds
         val (channelHistories, logInfo) =
           Await.result(
             ChannelConversationInterpreter.getChannelHistory(channelId, cfg, httpService).
