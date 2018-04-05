@@ -35,6 +35,7 @@ class PostsAlgosSpecs extends mutable.Specification with ScalaCheck with AfterAl
   }
 
   def emptyCollectionWhenTokenInvalid = {
+    import slacks.core.config.Config
     val token = SlackAccessToken(Token("xoxp-","aaa"), "channel:list" :: Nil)
     val channelId = "fake-channel-id"
     val fakeTeamId = "TEAM-1234"
@@ -42,7 +43,7 @@ class PostsAlgosSpecs extends mutable.Specification with ScalaCheck with AfterAl
     val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
 
     val (channelPosts, logs) =
-      getChannelConversationHistory(slacks.core.config.Config.channelReadConfig)(channelId)(httpService).run(token)
+      getChannelConversationHistory(Config.channelReadConfig)(Config.usermentionBlacklistConfig)(channelId)(httpService).run(token)
 
     channelPosts.channel must_==(channelId)
     channelPosts.posts.botMessages.size must be_==(0)
@@ -51,6 +52,7 @@ class PostsAlgosSpecs extends mutable.Specification with ScalaCheck with AfterAl
   }
 
   def nothingWhenTokenInvalid = {
+    import slacks.core.config.Config
     val token = SlackAccessToken(Token("xoxp-","aaa"), "channel:list" :: Nil)
     val channelId = "fake-channel-id"
     val fakeTeamId = "TEAM-1234"
@@ -60,8 +62,9 @@ class PostsAlgosSpecs extends mutable.Specification with ScalaCheck with AfterAl
     (nugit.tube.configuration.ConfigValidator.loadCerebroConfig(nugit.tube.configuration.Config.config).toOption : @unchecked) match {
       case Some(cerebroConfig) ⇒
         runSeedSlackPostsGraph(fakeTeamId,
-                               slacks.core.config.Config.channelListConfig,
-                               slacks.core.config.Config.channelReadConfig,
+                               Config.channelListConfig,
+                               Config.channelReadConfig,
+                               Config.usermentionBlacklistConfig,
                                cerebroConfig.seedPostsCfg,
                                cerebroConfig.apiGatewayCfg, env)(httpService).run(token) must beNone
     }

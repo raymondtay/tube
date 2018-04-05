@@ -118,7 +118,7 @@ class PostSinkSpecs extends Specification with ScalaCheck with BeforeAfterAll {o
 
 object PostSinkSpecData {
   implicit val typeInfo = TypeInformation.of(classOf[(ChannelPosts, List[String])])
-  val data : List[(ChannelPosts, List[String])]= (ChannelPosts("fake-channel-id", SievedMessages(Nil, Nil, Nil)), Nil) :: Nil
+  val data : List[(ChannelPosts, List[String])]= (ChannelPosts("fake-channel-id", SievedMessages(Nil, Nil, Nil, Nil, Nil)), Nil) :: Nil
 }
 
 //

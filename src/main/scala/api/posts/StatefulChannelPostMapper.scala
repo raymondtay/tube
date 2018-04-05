@@ -37,9 +37,11 @@ import providers.slack.models.SlackAccessToken
  *
  * @param token slack token
  * @param slackReadCfg the configuration object that guides this mapper to connect with cerebro and/or slack's APIs
+ * @param blacklistedCfg the configuration object that contains the blacklisted message types
  */
 class StatefulPostsRetriever(token: SlackAccessToken[String])
                             (slackReadCfg: NonEmptyList[ConfigValidation] Either SlackChannelReadConfig[String])
+                            (blacklistedCfg: NonEmptyList[ConfigValidation] Either SlackBlacklistMessageForUserMentions)
                             extends RichMapFunction[String, (ChannelPosts,List[String])] with ListCheckpointed[StatefulPostsRetriever] with CheckpointListener {
 
   private var channelId : String = _
@@ -92,7 +94,7 @@ class StatefulPostsRetriever(token: SlackAccessToken[String])
         println     ("[map] Recovered at least 1 snapshot but state is not restored")
         logger.debug("[map] Recovered at least 1 snapshot but state is not restored")
     }
-    val (posts, logs) = getChannelConversationHistory(slackReadCfg)(channelId)(new slacks.core.program.RealHttpService).run(token)
+    val (posts, logs) = getChannelConversationHistory(slackReadCfg)(blacklistedCfg)(channelId)(new slacks.core.program.RealHttpService).run(token)
     this.channelId = channelId
     /* Count how many messages did we see */
     pCounter.inc(sumOfMessages(posts.posts))

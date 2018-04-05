@@ -154,11 +154,14 @@ object SlackFunctions {
 
   /**
     * API to retrieve all the activities from Slack for a particular channel
+    * @param config configuration for housing the REST endpoints
+    * @param blConfig configuration of blacklisted message types
     * @param channelId the ID of the channel you are interested 
     * @param timeout how long to wait before a timeout
     * @param token the slack access token
     */
   def getChannelConversationHistory(config: NonEmptyList[ConfigValidation] Either SlackChannelReadConfig[String])
+                                   (blacklistedConfig : NonEmptyList[ConfigValidation] Either SlackBlacklistMessageForUserMentions)
                                    (channelId: String)
                                    (httpService : HttpService)
                                    : Reader[SlackAccessToken[String], (ChannelPosts, List[String])] = Reader { (token: SlackAccessToken[String]) ⇒
@@ -171,16 +174,23 @@ object SlackFunctions {
     implicit val actorMat    = ActorMaterializer()
     import slacks.core.config.Config
     val datum =
-      config match {
-        case Right(cfg) ⇒
+      (config, blacklistedConfig) match {
+        case (Right(cfg), Right(blCfg)) ⇒
           val timeout : Duration = cfg.timeout seconds
           val (messages, logInfo) =
             Await.result(
-              ChannelConversationInterpreter.getChannelConversationHistory(channelId, cfg, httpService).
+              ChannelConversationInterpreter.getChannelConversationHistory(channelId, cfg, blCfg, httpService).
                 runReader(token).
                 runWriter.runSequential, timeout)
           (ChannelPosts(channelId, messages), logInfo)
-        case Left(validationErrors)  ⇒ (ChannelPosts(channelId, SievedMessages(Nil,Nil,Nil)), validationErrors.toList.map(_.errorMessage))
+
+        case (Left(cfgValidationErrors), Left(blCfgValidationErrors)) ⇒ 
+          (ChannelPosts(channelId, SievedMessages(Nil,Nil,Nil,Nil,Nil)),
+            cfgValidationErrors.toList.map(_.errorMessage) |+|
+            blCfgValidationErrors.toList.map(_.errorMessage))
+
+        case (_ , _) ⇒ (ChannelPosts(channelId, SievedMessages(Nil,Nil,Nil,Nil,Nil)), "We cannot proceed when either configuration is borked." :: Nil)
+ 
       }
     actorMat.shutdown()
     actorSystem.shutdown()
