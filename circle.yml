@@ -17,8 +17,9 @@ checkout:
     - git submodule update --recursive --init # use submodules
 
 dependencies:
-  cache_directories:
-    - "~/.sbt"
+  # Disabling circleci in picking up cached binaries
+  # cache_directories:
+  #   - "~/.sbt"
   pre:
     - wget --output-document=$HOME/bin/sbt-launch.jar
       https://repo.typesafe.com/typesafe/ivy-releases/org.scala-sbt/sbt-launch/"$SBT_VERSION"/sbt-launch.jar
