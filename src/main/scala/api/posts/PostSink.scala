@@ -80,7 +80,9 @@ class PostSink(teamId : TeamId, cerebroConfig : CerebroSeedPostsConfig, gatewayC
         val jsonData =
             record.posts.botMessages.map(_.asJson) ++
             record.posts.userAttachmentMessages.map(_.asJson) ++
-            record.posts.userFileShareMessages.map(_.asJson)
+            record.posts.userFileShareMessages.map(_.asJson) ++
+            record.posts.fileCommentMessages.map(_.asJson) ++
+            record.posts.whitelistedMessages
 
         val req = Request[IO](method = POST, uri=config).withBody(jsonData.asJson.noSpaces).putHeaders(`Content-Type`(MediaType.`application/json`), `Host`(gatewayCfg.hostname))
         Either.catchOnly[java.net.ConnectException](httpClient.expect[String](req)) match {
