@@ -123,6 +123,7 @@ object Main extends ChannelAlgos with UsersAlgos with PostsAlgos with TeamAlgos 
           runSeedSlackPostsGraph(teamId,
                                  Config.channelListConfig,
                                  Config.channelReadConfig,
+                                 Config.usermentionBlacklistConfig,
                                  cerebroConfig.seedPostsCfg,
                                  cerebroConfig.apiGatewayCfg,
                                  env)(httpService).run(SlackAccessToken(commandlineCfg.token.get, Nil))

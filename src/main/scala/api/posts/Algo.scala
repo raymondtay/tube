@@ -37,6 +37,7 @@ trait PostsAlgos {
     *
     * @param env StreamExecutionEnvironment instance
     * @param config configuration for retrieving slack via REST
+    * @param blacklistedCfg the configuration object that contains the blacklisted message types
     * @param cerebroConfig configuration that reveals where cerebro is hosted
     * @param actorSystem  (environment derived)
     * @param actorMaterializer (environment derived)
@@ -45,6 +46,7 @@ trait PostsAlgos {
   def runSeedSlackPostsGraph(teamId : TeamId,
                              config: NonEmptyList[ConfigValidation] Either SlackChannelListConfig[String],
                              slackReadCfg: NonEmptyList[ConfigValidation] Either SlackChannelReadConfig[String],
+                             blacklistedCfg: NonEmptyList[ConfigValidation] Either SlackBlacklistMessageForUserMentions,
                              cerebroConfig : CerebroSeedPostsConfig,
                              gatewayConfig : ApiGatewayConfig,
                              env: StreamExecutionEnvironment)
@@ -58,7 +60,7 @@ trait PostsAlgos {
       case _   ⇒
         val channelIds : List[String] = channels.map(_.id)
         env.fromParallelCollection(new ChannelIdsSplittableIterator(channelIds)(cerebroConfig))
-          .map(new StatefulPostsRetriever(token)(slackReadCfg)).name("channel-posts-retriever")
+          .map(new StatefulPostsRetriever(token)(slackReadCfg)(blacklistedCfg)).name("channel-posts-retriever")
           .addSink(new PostSink(teamId, cerebroConfig, gatewayConfig)).name("channel-posts-sink")
         env.execute("cerebro-seed-slack-posts")
         /* NOTE: be aware that RTEs can be thrown here */

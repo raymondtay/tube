@@ -135,7 +135,7 @@ class ChannelSinkInTest(teamId: TeamId, cerebroCfg: CerebroSeedChannelsConfig, g
   import ExceptionTypes._
 
   val service = exceptionType match {
-    case NO_THROW         ⇒ HttpService[IO] { case r ⇒ Response[IO](Ok).withBody(CerebroOK(1).asJson.noSpaces) }
+    case NO_THROW         ⇒ HttpService[IO] { case r ⇒ Response[IO](Ok).withBody(CerebroOK(Some(1)).asJson.noSpaces) }
     case THROW_EXPECTED   ⇒ HttpService[IO] { case r ⇒ Response[IO](Ok).withBody(CerebroNOK(Nil).asJson.noSpaces) }
     case THROW_UNEXPECTED ⇒ HttpService[IO] { case r ⇒ Response[IO](Ok).withBody("""{"errors": "unexpected return from cerebro."}""") }
   }

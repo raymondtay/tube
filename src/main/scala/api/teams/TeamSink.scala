@@ -87,6 +87,18 @@ class TeamSink(teamId: TeamId,
     }
   }
 
+  private def parseResponseWhenError = Reader{ (jsonString: String) ⇒
+    import io.circe.parser._
+    decode[CerebroNOK](jsonString) match {
+      case Right(ok) ⇒
+        logger.error(s"[NOK] Cerebro returned the following errors on the data: ${ok}")
+        "Cerebro was not happy with the input".asLeft[Boolean]
+      case Left(somethingelse) ⇒
+        logger.error(s"[NOK] Unexpected error: $somethingelse")
+        "Cerebro returned an unknown error".asLeft[Boolean]
+    }
+  }
+
   /* if we can decode the json as `CerebroOK` that means its OK; else its going
    * to be either `CerebroNOK` which means that there's invalid json data
    * otherwise its "unknown"
@@ -95,18 +107,13 @@ class TeamSink(teamId: TeamId,
     import io.circe.parser._
     val jsonString = jsonEffect.unsafeRunSync
     decode[CerebroOK](jsonString) match {
-      case Left(error) ⇒
-        decode[CerebroNOK](jsonString) match {
-          case Right(ok) ⇒
-            logger.error(s"[NOK] Cerebro returned the following errors on the data: ${ok}")
-            "Cerebro was not happy with the input".asLeft[Boolean]
-          case Left(somethingelse) ⇒
-            logger.error(s"[NOK] Unexpected error: $somethingelse")
-            "Cerebro returned an unknown error".asLeft[Boolean]
-        }
-      case Right(ok) ⇒
-        logger.info(s"[OK] Cerebro returned: ${ok.received}")
+      case Left(error) ⇒ parseResponseWhenError(jsonString)
+
+      case Right(CerebroOK(Some(ok))) ⇒
+        logger.info(s"[OK] Cerebro returned: ${ok}")
         true.asRight[String]
+
+      case Right(CerebroOK(None)) ⇒ parseResponseWhenError(jsonString)
     }
   }
 }
