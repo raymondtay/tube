@@ -120,7 +120,7 @@ object JsonCodecGenerators {
     comment  ← arbitrary[String].suchThat(!_.isEmpty)
     mentions  ← listOfN(5, generateLegalSlackUserIds)
     reactions  ← listOfN(5, genReaction)
-  } yield FileComment(tpe, subtype, text, user, comment, mentions, reactions)
+  } yield FileComment(tpe, subtype, text, user, comment, mentions, reactions, "123123.123123")
 
   val genJsonMessage : Gen[Json] = for {
     json ← oneOf(parse("{}").getOrElse(Json.Null) :: Nil)
