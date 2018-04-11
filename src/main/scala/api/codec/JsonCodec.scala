@@ -26,7 +26,6 @@ object JsonCodec {
   }
 
   implicit val ufsEnc : Encoder[UserFileShareMessage] = deriveEncoder[UserFileShareMessage]
-  implicit val ufEnc : Encoder[UserFile] = deriveEncoder[UserFile]
   implicit val botAttachmentEnc : Encoder[BotAttachmentMessage] = deriveEncoder[BotAttachmentMessage]
   implicit val userAttachmentEnc : Encoder[UserAttachmentMessage] = deriveEncoder[UserAttachmentMessage]
 

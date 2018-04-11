@@ -73,7 +73,7 @@ class TeamSink(teamId: TeamId,
   }
 
   protected def transferToCerebro : Reader[Team, Either[String,IO[String]]] = Reader{ (record: Team) ⇒
-    Uri.fromString(cerebroConfig.teamIdPlaceHolder.r.replaceAllIn(cerebroConfig.url, teamId)) match {
+    Uri.fromString(cerebroConfig.url) match {
       case Left(error) ⇒ "Unable to parse cerebro's configuration".asLeft
       case Right(config) ⇒
         import io.circe.generic.auto._, io.circe.syntax._

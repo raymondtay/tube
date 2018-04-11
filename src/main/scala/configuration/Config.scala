@@ -99,8 +99,7 @@ case class CerebroTeamInfoConfig(
   port : Int,
   uri: String,
   url : String,
-  timeout : Long,
-  teamIdPlaceHolder: String
+  timeout : Long
   )
 case class CerebroSeedUsersConfig(
   method: String,
@@ -357,8 +356,7 @@ object ConfigValidator extends ConfigValidator {
      validatePort(config, "team.info"),
      validateUri(config,  "team.info"),
      validateUrl(config,  "team.info"),
-     validateTimeout(config, "team.info"),
-     validatePlaceHolder(config, "team.info")).mapN((m,h,p,uri,url,timeout, teamIdVar) ⇒ CerebroTeamInfoConfig(m,h,p,uri,url,timeout, teamIdVar.head)),
+     validateTimeout(config, "team.info")).mapN((m,h,p,uri,url,timeout) ⇒ CerebroTeamInfoConfig(m,h,p,uri,url,timeout)),
      (validateUrlHttpMethod(config, "seed.users"),
      validateHost(config, "seed.users"),
      validatePort(config, "seed.users"),

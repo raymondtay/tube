@@ -116,7 +116,7 @@ class TeamSinkSpecs extends Specification with ScalaCheck with BeforeAfterAll {o
 
 object TeamSinkSpecData {
   val data : Team =
-    Team(name = "test team name", domain = "test domain", email_domain = "yahoo.com", image_132 = "link to image", emojis= Nil)
+    Team(id = "TDUMMYTEAM01", name = "test team name", domain = "test domain", email_domain = "yahoo.com", image_132 = "link to image", emojis= Nil)
 }
 
 

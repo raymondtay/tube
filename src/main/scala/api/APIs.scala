@@ -46,7 +46,7 @@ object SlackFunctions {
     def onError(teamId: TeamId) =
       Reader{ (e: io.circe.DecodingFailure) ⇒ 
         logger.error(s"[retrieveTeamInfo] Unable to decode json with details: ${e}")
-        ((teamId, Team("", "", "", "", Nil)), e.message :: Nil)
+        ((teamId, Team("", "", "", "", "", Nil)), e.message :: Nil)
       }
     def onSuccess(logs: List[String])(teamId: TeamId) =
       Reader{ (team: Team) ⇒ 
@@ -62,11 +62,11 @@ object SlackFunctions {
 
         minedResults.bimap(onError(teamId).run, onSuccess(logInfo)(teamId).run).toOption match {
           case Some(d) ⇒ d
-          case None ⇒ (("", Team("", "", "", "", Nil)), Nil)
+          case None ⇒ (("", Team("", "", "", "", "", Nil)), Nil)
         }
-      case (Right(_), Left(teamInfoErrors)) ⇒ (("",Team("","","","",Nil)), teamInfoErrors.toList.map(_.errorMessage))
-      case (Left(emojiErrors), Right(_)) ⇒ (("",Team("","","","",Nil)), emojiErrors.toList.map(_.errorMessage))
-      case (Left(emojiErrors), Left(teamInfoErrors)) ⇒ (("",Team("","","","",Nil)), teamInfoErrors.toList.map(_.errorMessage) ++ emojiErrors.toList.map(_.errorMessage))
+      case (Right(_), Left(teamInfoErrors)) ⇒ (("",Team("","","","","",Nil)), teamInfoErrors.toList.map(_.errorMessage))
+      case (Left(emojiErrors), Right(_)) ⇒ (("",Team("","","","","",Nil)), emojiErrors.toList.map(_.errorMessage))
+      case (Left(emojiErrors), Left(teamInfoErrors)) ⇒ (("",Team("","","","","",Nil)), teamInfoErrors.toList.map(_.errorMessage) ++ emojiErrors.toList.map(_.errorMessage))
     }
   }
 
