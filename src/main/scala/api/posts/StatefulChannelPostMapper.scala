@@ -103,7 +103,10 @@ class StatefulPostsRetriever(token: SlackAccessToken[String])
 
   /* Int operations are closed under addition so therefore, its ∈ Monoid */
   private def sumOfMessages(datum : slacks.core.program.SievedMessages) = 
-    Monoid[Int].combine(datum.botMessages.size, Monoid[Int].combine(datum.userAttachmentMessages.size,datum.userFileShareMessages.size))
+    (datum.botMessages.size            |+|
+     datum.userAttachmentMessages.size |+|
+     datum.userFileShareMessages.size  |+|
+     datum.whitelistedMessages.size    |+| datum.fileCommentMessages.size)
   
 }
 

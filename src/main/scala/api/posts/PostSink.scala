@@ -128,6 +128,9 @@ class PostSink(teamId : TeamId, cerebroConfig : CerebroSeedPostsConfig, gatewayC
    * know its repeated in the Mapper as well. TODO is to refactor
    **/
   private def sumOfMessages(datum : slacks.core.program.SievedMessages) = 
-    Monoid[Int].combine(datum.botMessages.size, Monoid[Int].combine(datum.userAttachmentMessages.size,datum.userFileShareMessages.size))
+    (datum.botMessages.size            |+|
+     datum.userAttachmentMessages.size |+|
+     datum.userFileShareMessages.size  |+|
+     datum.whitelistedMessages.size    |+| datum.fileCommentMessages.size)
  
 }
