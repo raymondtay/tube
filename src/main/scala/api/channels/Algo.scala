@@ -98,7 +98,8 @@ trait ChannelAlgos {
       .windowAll(SlidingEventTimeWindows.of(windowSize, slideTime))
       .aggregate(rightAgg)
 
-    env.execute
+    env.execute("cerebro-seed-slack-channels")
+
     ((leftAgg.getResult(leftAgg.createAccumulator), rightAgg.getResult(leftAgg.createAccumulator)), logs)
 
   }
