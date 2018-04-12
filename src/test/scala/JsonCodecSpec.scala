@@ -32,7 +32,7 @@ object JsonCodecGenerators {
     suffix ← alphaNumStr.suchThat(!_.isEmpty)
   } yield s"<@U${suffix}>"
 
-  def generateThumbs360 = choose(0, 200)
+  def generateThumbs360 = oneOf("http://bogus.com/a.png", "","http://anotherbogus.com/444.jpg")
   def generateThumbsPdf = oneOf("http://bogus.com/a.pdf", "","http://anotherbogus.com/444.pdf")
   def generateThumbsVid = oneOf("http://bogus.com/a.mp4", "","http://anotherbogus.com/444.mp4")
 
