@@ -15,9 +15,9 @@ val commonSettings = Seq(
   scalacOptions ++= Seq("-Yrangepos", "-Ypartial-unification")
 )
 
-// mask out the nugit.tracer.*, nugit.routes.* and nugit.tube.*
+// mask out the nugit.tube.api.posts.StatefulPostsRetriever, nugit.tracer.*, nugit.routes.* and nugit.tube.*
 val codeCoverageSettings = Seq(
- coverageExcludedPackages := "nugit\\.tracer\\..*;nugit\\.routes\\..*;nugit\\.tube\\.Main",
+ coverageExcludedPackages := "nugit\\.tube\\.api\\.posts\\.StatefulPostsRetriever;nugit\\.tracer\\..*;nugit\\.routes\\..*;nugit\\.tube\\.Main",
  coverageMinimum := 80,
  coverageFailOnMinimum := false
 )

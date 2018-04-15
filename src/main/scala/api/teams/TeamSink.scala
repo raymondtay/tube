@@ -56,6 +56,9 @@ class TeamSink(teamId: TeamId,
 
   /* Flink calls this when it needs to send */
   override def invoke(record : Team) : Unit = {
+    if (record.id.isEmpty) {
+      logger.info(s"No team data xfer needed for team: [${teamId}]")
+    } else
     transferToCerebro.run(record) match {
       case Left(error) ⇒ throw new RuntimeException(error)
       case Right(result) ⇒

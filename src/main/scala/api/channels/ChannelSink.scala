@@ -50,6 +50,9 @@ class ChannelSink(teamId : TeamId, cerebroConfig : CerebroSeedChannelsConfig, ga
 
   /* Flink calls this when it needs to send */
   override def invoke(record : List[SlackChannel]) : Unit = {
+    if (record.isEmpty) { 
+      logger.info(s"No channel listing data xfers needed for team:[$teamId]") 
+    } else
     transferToCerebro.run(record) match {
       case Left(error) ⇒ throw new RuntimeException(error)
       case Right(result) ⇒

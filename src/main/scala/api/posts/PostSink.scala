@@ -56,11 +56,22 @@ class PostSink(teamId : TeamId, cerebroConfig : CerebroSeedPostsConfig, gatewayC
 
   /* Flink calls this when it needs to send */
   override def invoke(record : (ChannelPosts, List[String])) : Unit = {
+    if ( !needDataXfer(record._1)) {
+      logger.info(s"No message data xfer needed for channel: [${record._1.channel}]")
+    } else
     transferToCerebro.run(record._1) match {
       case Left(error) ⇒ throw new RuntimeException(error)
       case Right(result) ⇒
         parseResponse(result).bimap((error:String) ⇒ onError(error), (result: Boolean) ⇒ onSuccess(result))
     }
+  }
+
+  private def needDataXfer = Reader{ (record: ChannelPosts) ⇒
+    (record.posts.botMessages.size |+| 
+    record.posts.userAttachmentMessages.size |+| 
+    record.posts.userFileShareMessages.size |+| 
+    record.posts.fileCommentMessages.size |+| 
+    record.posts.whitelistedMessages.size) > 0
   }
 
   protected def onError(error : String) {

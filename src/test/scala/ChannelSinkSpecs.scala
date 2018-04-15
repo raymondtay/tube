@@ -38,6 +38,7 @@ import org.http4s.client.blaze._
   * @author Raymond Tay
   */
 class ChannelSinkSpecs extends Specification with ScalaCheck with BeforeAfterAll {override def is = sequential ^ s2"""
+  Flink would not push channel data to remote when channel data is empty $verifySinkWouldNotXferToRemoteWhenEmpty
   Flink would push channel data to `ChannelSink`, should xfer json data to RESTful Cerebro $verifySinkCanPostToRemoteNoErrors
   Flink would push channel data to `ChannelSink`, should xfer json data to RESTful Cerebro (Cerebro would return expected errors) $verifySinkCanPostToRemoteExpectedErrors
   Flink would push channel data to `ChannelSink`, should xfer json data to RESTful Cerebro (Cerebro would return un-expected errors) $verifySinkCanPostToRemoteUnexpectedErrors
@@ -75,6 +76,24 @@ class ChannelSinkSpecs extends Specification with ScalaCheck with BeforeAfterAll
     env.execute() must not (throwA[Throwable])
   }
 
+  def verifySinkWouldNotXferToRemoteWhenEmpty = {
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    // configure your test environment
+    env.setParallelism(1)
+    val teamId = "T1234Q"
+
+    (nugit.tube.configuration.ConfigValidator.loadCerebroConfig(Config.config).toOption : @unchecked) match {
+      case Some(cfg) ⇒
+        env
+          .fromCollection(List.empty[SlackChannel] :: Nil)
+          .map(new IdentityMapper[List[SlackChannel]])
+          .addSink(new ChannelSinkInTest(teamId, cfg.seedChannelsCfg, cfg.apiGatewayCfg, THROW_EXPECTED))
+    }
+
+    // we must see errors
+    env.execute() must not (throwA[org.apache.flink.runtime.client.JobExecutionException])
+  }
+
   def verifySinkCanPostToRemoteExpectedErrors = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     // configure your test environment
@@ -84,13 +103,13 @@ class ChannelSinkSpecs extends Specification with ScalaCheck with BeforeAfterAll
     (nugit.tube.configuration.ConfigValidator.loadCerebroConfig(Config.config).toOption : @unchecked) match {
       case Some(cfg) ⇒
         env
-          .fromCollection(ChannelSinkSpecData.data :: Nil)
+          .fromCollection(ChannelSinkSpecData.nonEmptyData :: Nil)
           .map(new IdentityMapper[List[SlackChannel]])
           .addSink(new ChannelSinkInTest(teamId, cfg.seedChannelsCfg, cfg.apiGatewayCfg, THROW_EXPECTED))
     }
 
     // we must see errors
-    env.execute() must throwA[org.apache.flink.runtime.client.JobExecutionException]
+    env.execute() must (throwA[org.apache.flink.runtime.client.JobExecutionException])
   }
 
   def verifySinkCanPostToRemoteUnexpectedErrors = {
@@ -108,7 +127,7 @@ class ChannelSinkSpecs extends Specification with ScalaCheck with BeforeAfterAll
     }
 
     // we must see errors
-    env.execute() must throwA[org.apache.flink.runtime.client.JobExecutionException]
+    env.execute() must (throwA[org.apache.flink.runtime.client.JobExecutionException])
   }
 
 }
@@ -119,6 +138,16 @@ object ChannelSinkSpecData {
       SlackChannel(id ="fake-channel-id", name = "fake-name", is_channel = true, created = 0L, creator = "", is_archived = false,
                    is_general = false, name_normalized = "", is_shared = false, is_org_shared  = false, is_member  = false, is_private  = false,
                    is_mpim = false, members = Nil, topic = Topic("","",0L), purpose = Purpose("","",0L), previous_names = Nil, num_members = 0L)
+    )
+  val nonEmptyData : List[SlackChannel]=
+    List(
+      SlackChannel(id ="fake-channel-id-0", name = "fake-name", is_channel = true, created = 0L, creator = "", is_archived = false,
+                   is_general = false, name_normalized = "", is_shared = false, is_org_shared  = false, is_member  = false, is_private  = false,
+                   is_mpim = false, members = Nil, topic = Topic("","",0L), purpose = Purpose("","",0L), previous_names = Nil, num_members = 0L),
+      SlackChannel(id ="fake-channel-id-1", name = "fake-name", is_channel = true, created = 0L, creator = "", is_archived = false,
+                   is_general = false, name_normalized = "", is_shared = false, is_org_shared  = false, is_member  = false, is_private  = false,
+                   is_mpim = false, members = Nil, topic = Topic("","",0L), purpose = Purpose("","",0L), previous_names = Nil, num_members = 0L)
+ 
     )
 }
 

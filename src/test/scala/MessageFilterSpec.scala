@@ -1,4 +1,4 @@
-package nugit.tube.api.codec
+package nugit.tube.api.posts
 
 
 import io.circe._, io.circe.parser._, io.circe.syntax._, io.circe.generic.semiauto._
@@ -25,8 +25,11 @@ import nugit.tube.api.model.ChannelPosts
   *
   * A possible work around:
   * https://github.com/rickynils/scalacheck/pull/370
+  *
+  * This specification tests for the filtering logic that is being applied to
+  * the messages of a slack channel [[MessageFilter]]
   */
-object JsonCodecGenerators {
+object MessageGenerators {
 
   def generateLegalSlackUserIds : Gen[String] = for {
     suffix ← alphaNumStr.suchThat(!_.isEmpty)
@@ -71,7 +74,8 @@ object JsonCodecGenerators {
     user ← option(arbitrary[String].suchThat(!_.isEmpty))
     bot_id ← option(arbitrary[String].suchThat(!_.isEmpty))
     ts ← arbitrary[String].suchThat(!_.isEmpty)
-  } yield UserFileShareMessage(tpe, subtype, text, file, fileComment1 ::fileComment2 ::Nil, user, bot_id, ts, Nil)
+    mentions ← listOfN(3, generateLegalSlackUserIds)
+  } yield UserFileShareMessage(tpe, subtype, text, file, fileComment1 ::fileComment2 ::Nil, user, bot_id, ts, mentions)
 
   def genBotAttachment : Gen[BotAttachment] = for {
     fallback ← arbitrary[String].suchThat(!_.isEmpty)
@@ -107,7 +111,8 @@ object JsonCodecGenerators {
     reply2 ← genReply
     text ← arbitrary[String].suchThat(!_.isEmpty)
     ts ← arbitrary[String].suchThat(!_.isEmpty)
-  } yield BotAttachmentMessage(tpe, user, bot_id, text, botAtt1::botAtt2::Nil, ts, reac1::reac2::Nil, reply1::reply2::Nil, Nil)
+    mentions ← listOfN(3, generateLegalSlackUserIds)
+  } yield BotAttachmentMessage(tpe, user, bot_id, text, botAtt1::botAtt2::Nil, ts, reac1::reac2::Nil, reply1::reply2::Nil, mentions)
 
   def genUserAttachmentMessage : Gen[UserAttachmentMessage] = for {
     tpe ← arbitrary[String].suchThat(!_.isEmpty)
@@ -118,7 +123,8 @@ object JsonCodecGenerators {
     reac2 ← genReaction
     reply1 ← genReply
     reply2 ← genReply
-  } yield UserAttachmentMessage(tpe, user, text, List(Json.arr(Json.fromString("test"))), ts, reac1::reac2::Nil, reply1::reply2::Nil, Nil)
+    mentions ← listOfN(3, generateLegalSlackUserIds)
+  } yield UserAttachmentMessage(tpe, user, text, List(Json.arr(Json.fromString("test"))), ts, reac1::reac2::Nil, reply1::reply2::Nil, mentions)
 
   val genFileComment : Gen[FileComment] = for {
     tpe ← arbitrary[String].suchThat(!_.isEmpty)
@@ -130,73 +136,129 @@ object JsonCodecGenerators {
     reactions  ← listOfN(5, genReaction)
   } yield FileComment(tpe, subtype, text, user, comment, mentions, reactions, "123123.123123")
 
-  val genJsonMessage : Gen[Json] = for {
-    json ← oneOf(parse("{}").getOrElse(Json.Null) :: Nil)
-  } yield json
-
-  def genSievedMessages : Gen[SievedMessages] = for {
+  def genSievedMessagesWithNoUserMentions : Gen[SievedMessages] = for {
     as ← genBotAttachmentMessage
     bs ← genUserAttachmentMessage
     cs ← genUserFileShareMessage
     ds ← genFileComment
-    es ← genJsonMessage
+    es ← genWhitelistedMessageWithNoUserMentions
   } yield SievedMessages(as::Nil, bs::Nil, cs::Nil, ds::Nil, es::Nil)
 
-  def genChannelPostsMessage : Gen[ChannelPosts] = for {
-    channelId ← arbitrary[String].suchThat(!_.isEmpty)
-    sievedMsgs ← genSievedMessages
-  } yield ChannelPosts(channelId, sievedMsgs)
+  def genSievedMessagesWithUserMentions : Gen[SievedMessages] = for {
+    as ← genBotAttachmentMessage
+    bs ← genUserAttachmentMessage
+    cs ← genUserFileShareMessage
+    ds ← genFileComment
+    es ← listOfN(1, genWhitelistedMessageWithUserMentions)
+  } yield SievedMessages(as::Nil, bs::Nil, cs::Nil, ds::Nil, es)
 
-  implicit val arbGenUserFile = Arbitrary(genUserFile)
-  implicit val arbGenUserFileShareMessage = Arbitrary(genUserFileShareMessage)
-  implicit val arbGenBotAttachmentMessage = Arbitrary(genBotAttachmentMessage)
-  implicit val arbGenUserAttachmentMessage = Arbitrary(genUserAttachmentMessage)
-  implicit val arbGenChannelPostsMessage = Arbitrary(genChannelPostsMessage)
+  val jsonWithNoUserMentions =
+    ("""
+    {
+      "type": "message",
+      "user": "U031ZH8HL",
+      "text": "good spotting...",
+      "ts": "1521179654.000121"
+    }
+    """ ::
+    """
+    {
+      "type": "message",
+      "user": "U32RGMDU5",
+      "text": "<!channel> just a gentle reminder to please close the door cause this morning,
+              one of our landlord's guy just went straight inside cause the door was wide open.
+              Best to make a habit to always close the door regardless if someone is still in there or not. Thanks in advance!",
+      "ts": "1521169888.000221"
+    } 
+    """ :: Nil).map(parse(_).getOrElse(Json.Null))
+
+  val jsonWithUserMentions =
+    ("""
+    {
+      "type": "message",
+      "user": "U024ZH7HL",
+      "text": "good spotting <@U1122>, you have to thank <@U11442> for this!",
+      "ts": "1521179654.000129",
+      "mentions" : ["U1122"]
+    }
+    """ ::
+    """
+    {
+      "type": "message",
+      "user": "U32RGMDU5",
+      "text": "<@U123123> just a gentle reminder to please close the door cause this morning, <@U444111> just went straight inside cause the door was wide open.  Best to make a habit to always close the door regardless if someone is still in there or not. Thanks in advance!",
+      "ts": "1521169888.000221",
+      "mentions" : ["U123123","U444111"]
+    } 
+    """ :: Nil).map(parse(_).getOrElse(Json.Null))
+
+  val genWhitelistedMessageWithNoUserMentions : Gen[Json] = for {
+    json ← oneOf(jsonWithNoUserMentions)
+  } yield json
+
+  val genWhitelistedMessageWithUserMentions : Gen[Json] = for {
+    json ← oneOf(jsonWithUserMentions)
+  } yield json
+ 
+  implicit val arbGenSievedMessagesWithNoUserMentions = Arbitrary(genSievedMessagesWithNoUserMentions)
+  implicit val arbGenSievedMessagesWithUserMentions = Arbitrary(genSievedMessagesWithUserMentions)
+
 }
 
-class JsonCodecSpecs extends mutable.Specification with ScalaCheck {override def is = sequential ^ s2"""
-  Generate 'UserFile' object as valid json $genUserFileJson
-  Generate 'UserFileShareMessage' object as valid json $genUserFileShareMessageJson
-  Generate 'UserAttachmentMessage' object as valid json $genUserAttachmentMessageJson
-  Generate 'BotAttachmentMessage' object as valid json $genBotAttachmentMessageJson
-  Generate 'ChannelPosts' object as valid json $genChannelPostsJson
+class MessageFilterSpecs extends mutable.Specification with ScalaCheck {override def is = sequential ^ s2"""
+  Filtering of 'BotAttachmentMessages' where either "reactions" != empty OR "mentions" != empty $filterBotMessages
+  Filtering of 'UserAttachmentMessages' where either "reactions" != empty OR "mentions" != empty $filterUserAttachmentMessages
+  Filtering of 'UserFileShareMessages' where either "comments" != empty OR "mentions" != empty $filterUserFileShareMessages
+  Filtering of 'FileComment' where either "reactions" != empty OR "mentions" != empty $filterWhitelistedMessagesWithNoUserMentions
+  Filtering of 'FileComment' where either "reactions" != empty OR "mentions" != empty $filterWhitelistedMessagesWithUserMentions
   """
 
-  import SlackJsonCodec._
-
-  def genUserFileJson = {
-    import JsonCodecGenerators.arbGenUserFile
-    prop { (msg: UserFile) ⇒
-      msg.asJson(SlackJsonCodec.slackUserFileEnc) must not beNull
-    }.set(minTestsOk = 1)
+  def filterWhitelistedMessagesWithNoUserMentions = {
+    import MessageGenerators.arbGenSievedMessagesWithNoUserMentions
+    prop { (msg: SievedMessages) ⇒
+      val result = MessageFilter.apply(msg)
+      result.whitelistedMessages.size must be_==(0)
+    }.set(minTestsOk = 10)
   }
 
-  def genUserFileShareMessageJson = {
-    import JsonCodecGenerators.arbGenUserFileShareMessage
-    prop { (msg: UserFileShareMessage) ⇒
-      msg.asJson(JsonCodec.ufsEnc) must not beNull
-    }.set(minTestsOk = 1)
+  def filterWhitelistedMessagesWithUserMentions = {
+    import MessageGenerators.arbGenSievedMessagesWithUserMentions
+    prop { (msg: SievedMessages) ⇒
+      val result = MessageFilter.apply(msg)
+      result.whitelistedMessages.size must beBetween(1,2)
+    }.set(minTestsOk = 10)
   }
 
-  def genBotAttachmentMessageJson = {
-    import JsonCodecGenerators.arbGenBotAttachmentMessage
-    prop { (msg: BotAttachmentMessage) ⇒
-      msg.asJson(JsonCodec.botAttachmentEnc) must not beNull
-    }.set(minTestsOk = 1)
+  def filterBotMessages = {
+    import MessageGenerators.arbGenSievedMessagesWithNoUserMentions
+    prop { (msg: SievedMessages) ⇒
+      val result = MessageFilter.apply(msg)
+      result.botMessages.map(_.mentions.size must be_==(3))
+    }.set(minTestsOk = 10)
   }
 
-  def genUserAttachmentMessageJson = {
-    import JsonCodecGenerators.arbGenUserAttachmentMessage
-    prop { (msg: UserAttachmentMessage) ⇒
-      msg.asJson(JsonCodec.userAttachmentEnc) must not beNull
-    }.set(minTestsOk = 1)
+  def filterUserAttachmentMessages = {
+    import MessageGenerators.arbGenSievedMessagesWithNoUserMentions
+    prop { (msg: SievedMessages) ⇒
+      val result = MessageFilter.apply(msg)
+      result.userAttachmentMessages.map(_.mentions.size must be_==(3))
+    }.set(minTestsOk = 10)
   }
 
-  def genChannelPostsJson = {
-    import JsonCodecGenerators.arbGenChannelPostsMessage
-    prop { (msg: ChannelPosts) ⇒
-      msg.asJson(JsonCodec.slacksPostsEncoder) must not beNull
-    }.set(minTestsOk = 1)
+  def filterUserFileShareMessages = {
+    import MessageGenerators.arbGenSievedMessagesWithNoUserMentions
+    prop { (msg: SievedMessages) ⇒
+      val result = MessageFilter.apply(msg)
+      result.userFileShareMessages.map(_.mentions.size must be_==(3))
+    }.set(minTestsOk = 10)
+  }
+
+  def filterFileCommentMessages = {
+    import MessageGenerators.arbGenSievedMessagesWithNoUserMentions
+    prop { (msg: SievedMessages) ⇒
+      val result = MessageFilter.apply(msg)
+      result.fileCommentMessages.map(_.mentions.size must be_==(5))
+    }.set(minTestsOk = 10)
   }
 
 }

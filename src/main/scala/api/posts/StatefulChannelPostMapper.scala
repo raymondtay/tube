@@ -83,22 +83,25 @@ class StatefulPostsRetriever(token: SlackAccessToken[String])
 
     val snapshotSleepTime = 100
     (atLeastOneSnapshotComplete, restored) match {
-      case (false, _) =>
+      case (false, _) ⇒
         println     ("[map] Sleeping 100 ms for snapshot to complete.")
         logger.debug("[map] Sleeping 100 ms for snapshot to complete.")
         Thread.sleep(snapshotSleepTime)
-      case (true, true) =>
+      case (true, true) ⇒
         println     ("[map] Recovered at least 1 snapshot and state is restored ")
         logger.debug("[map] Recovered at least 1 snapshot and state is restored ")
-      case (true, false) =>
+      case (true, false) ⇒
         println     ("[map] Recovered at least 1 snapshot but state is not restored")
         logger.debug("[map] Recovered at least 1 snapshot but state is not restored")
     }
     val (posts, logs) = getChannelConversationHistory(slackReadCfg)(blacklistedCfg)(channelId)(new slacks.core.program.RealHttpService).run(token)
+
+    val sievedPosts = ChannelPosts(posts.channel, MessageFilter.apply(posts.posts))
+    
     this.channelId = channelId
     /* Count how many messages did we see */
-    pCounter.inc(sumOfMessages(posts.posts))
-    (posts, logs)
+    pCounter.inc(sumOfMessages(sievedPosts.posts))
+    (sievedPosts, logs)
   }
 
   /* Int operations are closed under addition so therefore, its ∈ Monoid */
@@ -110,3 +113,32 @@ class StatefulPostsRetriever(token: SlackAccessToken[String])
   
 }
 
+//
+// Filtering logic for sieving out notable messages such that the outcome of
+// applying these filters would present the final set of messages to be sunk
+// to Cerebro
+//
+object MessageFilter {
+
+  import providers.slack.models._
+  import slacks.core.program.SievedMessages
+
+  // Only let throught bot messages where "reactions", "comments" and "mentions" are
+  // non-empty
+  def apply(msgs: SievedMessages) = {
+    Applicative[Id].map5(
+      msgs.botMessages.filter( filterBotMessage(_) ),
+      msgs.userAttachmentMessages.filter( filterUserAttachmentMessage(_) ),
+      msgs.userFileShareMessages.filter( filterUserFileShareMessage(_) ),
+      msgs.fileCommentMessages.filter( filterFileCommentMessage(_) ),
+      msgs.whitelistedMessages.filter( filterWhitelistedMessage(_) )
+    )(SievedMessages.apply)
+  }
+
+  def filterBotMessage = Reader{ (msg: BotAttachmentMessage) ⇒ !msg.reactions.isEmpty || !msg.mentions.isEmpty }
+  def filterUserAttachmentMessage = Reader{ (msg: UserAttachmentMessage) ⇒ !msg.reactions.isEmpty || !msg.mentions.isEmpty }
+  def filterUserFileShareMessage = Reader{ (msg: UserFileShareMessage) ⇒ !msg.mentions.isEmpty || !msg.comments.isEmpty}
+  def filterWhitelistedMessage = Reader{ (msg: io.circe.Json) ⇒  !(msg \\ "mentions").isEmpty }
+  def filterFileCommentMessage = Reader{ (msg: FileComment) ⇒ !msg.mentions.isEmpty || !msg.reactions.isEmpty }
+
+}

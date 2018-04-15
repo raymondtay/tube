@@ -41,9 +41,9 @@ import org.http4s.client.blaze._
   * @author Raymond Tay
   */
 class PostSinkSpecs extends Specification with ScalaCheck with BeforeAfterAll {override def is = sequential ^ s2"""
-  Flink would push data to `PostSink`, should xfer json data to RESTful Cerebro $verifySinkCanPostToRemoteNoErrors
-  Flink would push data to `PostSink`, should xfer json data to RESTful Cerebro (Cerebro returns expected errors)    $verifySinkCanPostToRemoteExpectedErrors
-  Flink would push data to `PostSink`, should xfer json data to RESTful Cerebro (Cerebro returns un-expected errors) $verifySinkCanPostToRemoteUnexpectedErrors
+  Flink would push data to `PostSink` but should not xfer json data to Cerebro when empty $verifySinkWouldNotXferWhenEmpty
+  Flink would push data to `PostSink` and should xfer json data to Cerebro (Cerebro returns expected errors)    $verifySinkCanPostToRemoteExpectedErrors
+  Flink would push data to `PostSink` and should xfer json data to Cerebro (Cerebro returns un-expected errors) $verifySinkCanPostToRemoteUnexpectedErrors
   """
   import ExceptionTypes._
   var service : HttpService[IO] = _
@@ -60,7 +60,7 @@ class PostSinkSpecs extends Specification with ScalaCheck with BeforeAfterAll {o
     client.shutdownNow()
   }
 
-  def verifySinkCanPostToRemoteNoErrors = {
+  def verifySinkWouldNotXferWhenEmpty = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     // configure your test environment
     env.setParallelism(1)
@@ -69,7 +69,7 @@ class PostSinkSpecs extends Specification with ScalaCheck with BeforeAfterAll {o
     (nugit.tube.configuration.ConfigValidator.loadCerebroConfig(Config.config).toOption : @unchecked) match {
       case Some(cfg) ⇒ 
         env
-          .fromCollection(PostSinkSpecData.data)
+          .fromCollection(PostSinkSpecData.emptyData)
           .map(new IdentityMapper[(ChannelPosts, List[String])])
           .addSink(new PostSinkInTest(teamId, cfg.seedPostsCfg, cfg.apiGatewayCfg, NO_THROW))
     }
@@ -87,13 +87,13 @@ class PostSinkSpecs extends Specification with ScalaCheck with BeforeAfterAll {o
     (nugit.tube.configuration.ConfigValidator.loadCerebroConfig(Config.config).toOption : @unchecked) match {
       case Some(cfg) ⇒ 
         env
-          .fromCollection(PostSinkSpecData.data)
+          .fromCollection(PostSinkSpecData.emptyData)
           .map(new IdentityMapper[(ChannelPosts, List[String])])
           .addSink(new PostSinkInTest(teamId, cfg.seedPostsCfg, cfg.apiGatewayCfg, THROW_EXPECTED))
     }
 
     // we must see errors
-    env.execute() must throwA[org.apache.flink.runtime.client.JobExecutionException]
+    env.execute() must not (throwA[org.apache.flink.runtime.client.JobExecutionException])
   }
 
   def verifySinkCanPostToRemoteUnexpectedErrors = {
@@ -105,20 +105,21 @@ class PostSinkSpecs extends Specification with ScalaCheck with BeforeAfterAll {o
     (nugit.tube.configuration.ConfigValidator.loadCerebroConfig(Config.config).toOption : @unchecked) match {
       case Some(cfg) ⇒ 
         env
-          .fromCollection(PostSinkSpecData.data)
+          .fromCollection(PostSinkSpecData.emptyData)
           .map(new IdentityMapper[(ChannelPosts, List[String])])
           .addSink(new PostSinkInTest(teamId, cfg.seedPostsCfg, cfg.apiGatewayCfg, THROW_UNEXPECTED))
     }
 
     // we must see errors
-    env.execute() must throwA[org.apache.flink.runtime.client.JobExecutionException]
+    env.execute() must not (throwA[org.apache.flink.runtime.client.JobExecutionException])
   }
 
 }
 
 object PostSinkSpecData {
   implicit val typeInfo = TypeInformation.of(classOf[(ChannelPosts, List[String])])
-  val data : List[(ChannelPosts, List[String])]= (ChannelPosts("fake-channel-id", SievedMessages(Nil, Nil, Nil, Nil, Nil)), Nil) :: Nil
+  val emptyData : List[(ChannelPosts, List[String])]= (ChannelPosts("fake-channel-id", SievedMessages(Nil, Nil, Nil, Nil, Nil)), Nil) :: Nil
+  val nonEmptyData : List[(ChannelPosts, List[String])] =(ChannelPosts("fake-channel-id", SievedMessages(Nil, Nil, Nil, Nil, Nil)), Nil) :: Nil
 }
 
 //

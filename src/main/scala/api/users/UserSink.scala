@@ -54,6 +54,9 @@ class UserSink(teamId: TeamId, cerebroConfig : CerebroSeedUsersConfig, gatewayCf
 
   /* Flink calls this when it needs to send */
   override def invoke(record : List[User]) : Unit = {
+    if (record.isEmpty) {
+      logger.info(s"No user listing data xfer needed for team: [${teamId}]")
+    } else
     transferToCerebro.run(record) match {
       case Left(error) ⇒ throw new RuntimeException(error)
       case Right(result) ⇒
