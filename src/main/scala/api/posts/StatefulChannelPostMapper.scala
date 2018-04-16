@@ -138,7 +138,7 @@ object MessageFilter {
   def filterBotMessage = Reader{ (msg: BotAttachmentMessage) ⇒ !msg.reactions.isEmpty || !msg.mentions.isEmpty }
   def filterUserAttachmentMessage = Reader{ (msg: UserAttachmentMessage) ⇒ !msg.reactions.isEmpty || !msg.mentions.isEmpty }
   def filterUserFileShareMessage = Reader{ (msg: UserFileShareMessage) ⇒ !msg.mentions.isEmpty || !msg.comments.isEmpty}
-  def filterWhitelistedMessage = Reader{ (msg: io.circe.Json) ⇒  !(msg \\ "mentions").isEmpty }
+  def filterWhitelistedMessage = Reader{ (msg: io.circe.Json) ⇒  !(msg \\ "mentions").isEmpty || !(msg \\ "reactions").isEmpty || !(msg \\ "replies").isEmpty }
   def filterFileCommentMessage = Reader{ (msg: FileComment) ⇒ !msg.mentions.isEmpty || !msg.reactions.isEmpty }
 
 }
