@@ -45,7 +45,8 @@ class PostSink(teamId : TeamId, cerebroConfig : CerebroSeedPostsConfig, gatewayC
 
   override def open(params: Configuration) : Unit = {
     logger = LoggerFactory.getLogger(classOf[PostSink])
-    httpClient = Http1Client[IO](config = BlazeClientConfig.defaultConfig.copy(responseHeaderTimeout = cerebroConfig.timeout seconds)).unsafeRunSync
+    httpClient = Http1Client[IO](config = BlazeClientConfig.defaultConfig.copy(idleTimeout = cerebroConfig.timeout seconds,
+                                                                               responseHeaderTimeout = cerebroConfig.timeout seconds)).unsafeRunSync
     pCounter = getRuntimeContext().getMetricGroup().counter("sink-posts-counter")
   }
 

@@ -46,7 +46,8 @@ class TeamSink(teamId: TeamId,
 
   override def open(params: Configuration) : Unit = {
     logger = LoggerFactory.getLogger(classOf[TeamSink])
-    httpClient = Http1Client[IO](config = BlazeClientConfig.defaultConfig.copy(responseHeaderTimeout = cerebroConfig.timeout seconds)).unsafeRunSync
+    httpClient = Http1Client[IO](config = BlazeClientConfig.defaultConfig.copy(idleTimeout = cerebroConfig.timeout seconds,
+                                                                               responseHeaderTimeout = cerebroConfig.timeout seconds)).unsafeRunSync
     tCounter = getRuntimeContext().getMetricGroup().counter("sink-teams-counter")
   }
 

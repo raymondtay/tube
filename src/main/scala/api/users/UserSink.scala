@@ -44,7 +44,8 @@ class UserSink(teamId: TeamId, cerebroConfig : CerebroSeedUsersConfig, gatewayCf
 
   override def open(params: Configuration) : Unit = {
     logger = LoggerFactory.getLogger(classOf[UserSink])
-    httpClient = Http1Client[IO](config = BlazeClientConfig.defaultConfig.copy(responseHeaderTimeout = cerebroConfig.timeout seconds)).unsafeRunSync
+    httpClient = Http1Client[IO](config = BlazeClientConfig.defaultConfig.copy(idleTimeout = cerebroConfig.timeout seconds,
+                                                                               responseHeaderTimeout = cerebroConfig.timeout seconds)).unsafeRunSync
     uCounter = getRuntimeContext().getMetricGroup().counter("sink-users-counter")
   }
 

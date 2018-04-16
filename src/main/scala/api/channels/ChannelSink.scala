@@ -44,7 +44,8 @@ class ChannelSink(teamId : TeamId, cerebroConfig : CerebroSeedChannelsConfig, ga
 
   override def open(params: Configuration) : Unit = {
     logger = LoggerFactory.getLogger(classOf[ChannelSink])
-    httpClient = Http1Client[IO](config = BlazeClientConfig.defaultConfig.copy(responseHeaderTimeout = cerebroConfig.timeout seconds)).unsafeRunSync
+    httpClient = Http1Client[IO](config = BlazeClientConfig.defaultConfig.copy(idleTimeout = cerebroConfig.timeout seconds, 
+                                                                               responseHeaderTimeout = cerebroConfig.timeout seconds)).unsafeRunSync
     cCounter = getRuntimeContext().getMetricGroup().counter("sink-channel-counter")
   }
 
