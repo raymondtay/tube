@@ -24,8 +24,8 @@ import nugit.tube.configuration._
 import nugit.tube.api.SlackFunctions
 
 class TeamsAlgosSpecs extends mutable.Specification with ScalaCheck with AfterAll with TeamAlgosInTest {override def is = sequential ^ s2"""
-  Tube returns an empty collection of slack users when slack access token is invalid $emptyCollectionWhenTokenInvalid
-
+  Tube returns an empty collection of slack team when slack access token is invalid $emptyCollectionWhenTokenInvalid
+  Tube returns collected slack team data when slack access token is valid $validTeamDataWhenTokenValid
   """
 
   implicit val actorSystem = ActorSystem("teams-algos-specs")
@@ -56,6 +56,31 @@ class TeamsAlgosSpecs extends mutable.Specification with ScalaCheck with AfterAl
             team.email_domain must be_==("")
             team.image_132 must be_==("")
             team.emojis must be empty
+        }
+    }
+  }
+
+  def validTeamDataWhenTokenValid = {
+    val token = SlackAccessToken(Token("xoxp-","fake-slack-token"), "channel:list" :: Nil)
+    val fakeTeamId = "TEAM-12345"
+    val env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
+
+    implicit val httpService = new nugit.tube.api.FakeTeamInfoHttpService
+
+    (nugit.tube.configuration.ConfigValidator.loadCerebroConfig(slacks.core.config.Config.config).toOption : @unchecked) match {
+      case Some(cerebroConfig) ⇒
+        (runGetSlackTeamInfo(slacks.core.config.Config.teamInfoConfig,
+                             slacks.core.config.Config.emojiListConfig,
+                             cerebroConfig.teamInfoCfg,
+                             cerebroConfig.apiGatewayCfg,
+                             env)(httpService).run(token) : @unchecked) match {
+          case Some((team, logs)) ⇒ 
+            team.name must be_==("My Team")
+            team.domain must be_==("example")
+            team.email_domain must be_==("example.com")
+            team.image_132 must be_==("""https://...""")
+            team.emojis must not be empty
+            team.emojis.size must be_==(3)
         }
     }
   }
