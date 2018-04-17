@@ -147,6 +147,63 @@ object JsonCodecGenerators {
     sievedMsgs ← genSievedMessages
   } yield ChannelPosts(channelId, sievedMsgs)
 
+  val jsonWithInvalidReactions = // "reactions" field must be not top-level (i.e nested) objects
+    """{ "key" : {"reactions" : [1,2]}}""" ::
+    """{ "key" : {"reactions" : []}}""" ::
+    """{ "key" : {}""" :: Nil map (parse(_).getOrElse(Json.Null))
+
+  val jsonWithValidReactions = // "reactions" field must be top-level objects
+    """{ "reactions" : [1,2]}""" ::
+    """{ "reactions" : []}""" :: Nil map (parse(_).getOrElse(Json.Null))
+
+  val jsonWithInvalidMentions = // "mentions" field must be not top-level (i.e nested) objects
+    """{ "key" : {"mentions" : [1,2]}}""" ::
+    """{ "key" : {"mentions" : []}}""" ::
+    """{ "key" : {}""" :: Nil map (parse(_).getOrElse(Json.Null))
+
+  val jsonWithValidMentions = // "mentions" field must be top-level objects
+    """{ "mentions" : ["<@U11122> good job!","<@U11122> good job again!"]}""" ::
+    """{ "mentions" : []}""" :: Nil map (parse(_).getOrElse(Json.Null))
+
+  val jsonWithInvalidReplies = // "replies" field must be not top-level (i.e nested) objects
+    """{ "key" : {"replies" : ["thanks","goodbye"]}}""" ::
+    """{ "key" : {"replies" : []}}""" ::
+    """{ "key" : {}""" :: Nil map (parse(_).getOrElse(Json.Null))
+
+  val jsonWithValidReplies = // "replies" field must be top-level objects
+    """{ "replies" : ["thanks","goodbye"]}""" ::
+    """{ "replies" : []}""" :: Nil map (parse(_).getOrElse(Json.Null))
+
+  val genJsonForNestedReactionsField = for {
+    json ← oneOf(jsonWithInvalidReactions)
+  } yield json
+
+  val genJsonForToplevelReactionsField = for {
+    json ← oneOf(jsonWithValidReactions)
+  } yield json
+
+  val genJsonForNestedMentionsField = for {
+    json ← oneOf(jsonWithInvalidMentions)
+  } yield json
+
+  val genJsonForToplevelMentionsField = for {
+    json ← oneOf(jsonWithValidMentions)
+  } yield json
+
+  val genJsonForNestedRepliesField = for {
+    json ← oneOf(jsonWithInvalidReplies)
+  } yield json
+
+  val genJsonForToplevelRepliesField = for {
+    json ← oneOf(jsonWithValidReplies)
+  } yield json
+
+  implicit val arbGenJsonToplevelReactionsField = Arbitrary(genJsonForToplevelReactionsField)
+  implicit val arbGenJsonNestedReactionsField = Arbitrary(genJsonForNestedReactionsField)
+  implicit val arbGenJsonToplevelMentionsField = Arbitrary(genJsonForToplevelMentionsField)
+  implicit val arbGenJsonNestedMentionsField = Arbitrary(genJsonForNestedMentionsField)
+  implicit val arbGenJsonToplevelRepliesField = Arbitrary(genJsonForToplevelRepliesField)
+  implicit val arbGenJsonNestedRepliesField = Arbitrary(genJsonForNestedRepliesField)
   implicit val arbGenUserFile = Arbitrary(genUserFile)
   implicit val arbGenUserFileShareMessage = Arbitrary(genUserFileShareMessage)
   implicit val arbGenBotAttachmentMessage = Arbitrary(genBotAttachmentMessage)
@@ -160,9 +217,63 @@ class JsonCodecSpecs extends mutable.Specification with ScalaCheck {override def
   Generate 'UserAttachmentMessage' object as valid json $genUserAttachmentMessageJson
   Generate 'BotAttachmentMessage' object as valid json $genBotAttachmentMessageJson
   Generate 'ChannelPosts' object as valid json $genChannelPostsJson
+  Validate that invalid "reactions" json returns 'false' $validateNestedReactionsField
+  Validate that valid "reactions" json returns 'true' $validateToplevelReactionsField
+  Validate that invalid "mentions" json returns 'false' $validateNestedMentionsField
+  Validate that valid "mentions" json returns 'true' $validateToplevelMentionsField
+  Validate that invalid "replies" json returns 'false' $validateNestedRepliesField
+  Validate that valid "replies" json returns 'true' $validateToplevelRepliesField
   """
 
   import SlackJsonCodec._
+
+  def validateNestedReactionsField = {
+    import JsonCodecGenerators.arbGenJsonNestedReactionsField
+    import JsonCodecLens._
+    prop { (msg: _root_.io.circe.Json) ⇒
+      isReactionsFieldPresent(msg) must beNone
+    }.set(minTestsOk = 1)
+  }
+
+  def validateToplevelReactionsField = {
+    import JsonCodecGenerators.arbGenJsonToplevelReactionsField
+    import JsonCodecLens._
+    prop { (msg: _root_.io.circe.Json) ⇒
+      isReactionsFieldPresent(msg) must beSome
+    }.set(minTestsOk = 1)
+  }
+
+  def validateNestedMentionsField = {
+    import JsonCodecGenerators.arbGenJsonNestedMentionsField
+    import JsonCodecLens._
+    prop { (msg: _root_.io.circe.Json) ⇒
+      isMentionsFieldPresent(msg) must beNone
+    }.set(minTestsOk = 1)
+  }
+
+  def validateToplevelMentionsField = {
+    import JsonCodecGenerators.arbGenJsonToplevelMentionsField
+    import JsonCodecLens._
+    prop { (msg: _root_.io.circe.Json) ⇒
+      isMentionsFieldPresent(msg) must beSome
+    }.set(minTestsOk = 1)
+  }
+
+  def validateNestedRepliesField = {
+    import JsonCodecGenerators.arbGenJsonNestedRepliesField
+    import JsonCodecLens._
+    prop { (msg: _root_.io.circe.Json) ⇒
+      isRepliesFieldPresent(msg) must beNone
+    }.set(minTestsOk = 1)
+  }
+
+  def validateToplevelRepliesField = {
+    import JsonCodecGenerators.arbGenJsonToplevelRepliesField
+    import JsonCodecLens._
+    prop { (msg: _root_.io.circe.Json) ⇒
+      isRepliesFieldPresent(msg) must beSome
+    }.set(minTestsOk = 1)
+  }
 
   def genUserFileJson = {
     import JsonCodecGenerators.arbGenUserFile

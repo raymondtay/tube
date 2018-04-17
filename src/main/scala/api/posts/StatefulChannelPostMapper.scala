@@ -25,6 +25,12 @@ import providers.slack.models.SlackAccessToken
  * A stateful streaming mapper function that emits each (channel-id, channel-posts) exactly once,
  * The state captured is the channel id and it only proceeds if the snapshot is
  * completed.
+ *
+ * Take note that in Apache Flink's semantics, this mapper would be deployed in
+ * parallel and distributed so remember to provide state restoration machinery
+ * into for your user-defined state. As always, follow Scala/Java's best
+ * practices on data serialization and de-serialization.
+ *
  * When the restoration fails, then a RTE is thrown and when combined with
  * tube's restart strategy (i.e. fixed-delay or failure-rate) then this
  * computation can be re-computed for this channel id only.
@@ -113,14 +119,18 @@ class StatefulPostsRetriever(token: SlackAccessToken[String])
   
 }
 
-//
-// Filtering logic for sieving out notable messages such that the outcome of
-// applying these filters would present the final set of messages to be sunk
-// to Cerebro
-//
+/**
+ * Filtering logic for sieving out notable messages such that the outcome of
+ * applying these filters would present the final set of messages to be sunk
+ * to Cerebro.
+ * 
+ * Pure functions with no side-effects, whatsoever. See
+ * [[StatefulChannelPostMapper]] on its usage.
+ */
 object MessageFilter {
 
   import providers.slack.models._
+  import nugit.tube.api.codec.JsonCodecLens._
   import slacks.core.program.SievedMessages
 
   // Only let throught bot messages where "reactions", "comments" and "mentions" are
@@ -138,7 +148,11 @@ object MessageFilter {
   def filterBotMessage = Reader{ (msg: BotAttachmentMessage) ⇒ !msg.reactions.isEmpty || !msg.mentions.isEmpty }
   def filterUserAttachmentMessage = Reader{ (msg: UserAttachmentMessage) ⇒ !msg.reactions.isEmpty || !msg.mentions.isEmpty }
   def filterUserFileShareMessage = Reader{ (msg: UserFileShareMessage) ⇒ !msg.mentions.isEmpty || !msg.comments.isEmpty}
-  def filterWhitelistedMessage = Reader{ (msg: io.circe.Json) ⇒  !(msg \\ "mentions").isEmpty || !(msg \\ "reactions").isEmpty || !(msg \\ "replies").isEmpty }
+  def filterWhitelistedMessage = Reader{ (msg: io.circe.Json) ⇒ 
+    isReactionsFieldPresent(msg).fold(false)((someReactions: Vector[io.circe.Json]) ⇒ if (someReactions.isEmpty) false else true) ||
+    isMentionsFieldPresent(msg).fold(false)((someMentions: Vector[io.circe.Json]) ⇒ if (someMentions.isEmpty) false else true) ||
+    isRepliesFieldPresent(msg).fold(false)((someReplies: Vector[io.circe.Json]) ⇒ if (someReplies.isEmpty) false else true)
+  }
   def filterFileCommentMessage = Reader{ (msg: FileComment) ⇒ !msg.mentions.isEmpty || !msg.reactions.isEmpty }
 
 }
