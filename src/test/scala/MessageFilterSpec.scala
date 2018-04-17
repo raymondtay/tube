@@ -152,6 +152,22 @@ object MessageGenerators {
     es ← listOfN(1, genWhitelistedMessageWithUserMentions)
   } yield SievedMessages(as::Nil, bs::Nil, cs::Nil, ds::Nil, es)
 
+  def genSievedMessagesWithUserMentionsReactions : Gen[SievedMessages] = for {
+    as ← genBotAttachmentMessage
+    bs ← genUserAttachmentMessage
+    cs ← genUserFileShareMessage
+    ds ← genFileComment
+    es ← listOfN(1, genWhitelistedMessageWithUserMentionsReactions)
+  } yield SievedMessages(as::Nil, bs::Nil, cs::Nil, ds::Nil, es)
+
+  def genSievedMessagesWithNoUserMentionsNorReactions : Gen[SievedMessages] = for {
+    as ← genBotAttachmentMessage
+    bs ← genUserAttachmentMessage
+    cs ← genUserFileShareMessage
+    ds ← genFileComment
+    es ← genWhitelistedMessageWithNoUserMentionsNorReactions
+  } yield SievedMessages(as::Nil, bs::Nil, cs::Nil, ds::Nil, es::Nil)
+
   val jsonWithNoUserMentions =
     ("""
     {
@@ -192,6 +208,52 @@ object MessageGenerators {
     } 
     """ :: Nil).map(parse(_).getOrElse(Json.Null))
 
+  val jsonWithUserMentionsReactions =
+    ("""
+    {
+      "type": "message",
+      "user": "U024ZH7HL",
+      "text": "good spotting <@U1122>, you have to thank <@U11442> for this!",
+      "ts": "1521179654.000129",
+      "reactions" : ["<@U2112> thanks!"],
+      "mentions" : ["U1122"]
+    }
+    """ ::
+    """
+    {
+      "type": "message",
+      "user": "U32RGMDU5",
+      "text": "<@U123123> just a gentle reminder to please close the door cause this morning, <@U444111> just went straight inside cause the door was wide open.  Best to make a habit to always close the door regardless if someone is still in there or not. Thanks in advance!",
+      "ts": "1521169888.000221",
+      "reactions" : [],
+      "mentions" : ["U123123","U444111"]
+    } 
+    """ :: Nil).map(parse(_).getOrElse(Json.Null))
+
+  val jsonWithNoUserMentionsNorReactions =
+    ("""
+    {
+      "type": "message",
+      "user": "U024ZH7HL",
+      "text": "good spotting <@U1122>, you have to thank <@U11442> for this!",
+      "ts": "1521179654.000129",
+      "replies" : ["<@U2112> thanks!"]
+    }
+    """ ::
+    """
+    {
+      "type": "message",
+      "user": "U32RGMDU5",
+      "text": "<@U123123> just a gentle reminder to please close the door cause this morning, <@U444111> just went straight inside cause the door was wide open.  Best to make a habit to always close the door regardless if someone is still in there or not. Thanks in advance!",
+      "ts": "1521169888.000221",
+      "replies" : ["good work !","thanks dude"]
+    } 
+    """ :: Nil).map(parse(_).getOrElse(Json.Null))
+
+  val genWhitelistedMessageWithNoUserMentionsNorReactions : Gen[Json] = for {
+    json ← oneOf(jsonWithNoUserMentionsNorReactions)
+  } yield json
+
   val genWhitelistedMessageWithNoUserMentions : Gen[Json] = for {
     json ← oneOf(jsonWithNoUserMentions)
   } yield json
@@ -199,9 +261,15 @@ object MessageGenerators {
   val genWhitelistedMessageWithUserMentions : Gen[Json] = for {
     json ← oneOf(jsonWithUserMentions)
   } yield json
+
+  val genWhitelistedMessageWithUserMentionsReactions : Gen[Json] = for {
+    json ← oneOf(jsonWithUserMentionsReactions)
+  } yield json
  
   implicit val arbGenSievedMessagesWithNoUserMentions = Arbitrary(genSievedMessagesWithNoUserMentions)
   implicit val arbGenSievedMessagesWithUserMentions = Arbitrary(genSievedMessagesWithUserMentions)
+  implicit val arbGenSievedMessagesWithUserMentionsReactions = Arbitrary(genSievedMessagesWithUserMentionsReactions)
+  implicit val arbGenSievedMessagesWithNoUserMentionsNorReactions = Arbitrary(genSievedMessagesWithNoUserMentionsNorReactions)
 
 }
 
@@ -209,8 +277,10 @@ class MessageFilterSpecs extends mutable.Specification with ScalaCheck {override
   Filtering of 'BotAttachmentMessages' where either "reactions" != empty OR "mentions" != empty $filterBotMessages
   Filtering of 'UserAttachmentMessages' where either "reactions" != empty OR "mentions" != empty $filterUserAttachmentMessages
   Filtering of 'UserFileShareMessages' where either "comments" != empty OR "mentions" != empty $filterUserFileShareMessages
-  Filtering of 'FileComment' where either "reactions" != empty OR "mentions" != empty $filterWhitelistedMessagesWithNoUserMentions
-  Filtering of 'FileComment' where either "reactions" != empty OR "mentions" != empty $filterWhitelistedMessagesWithUserMentions
+  Filtering of white-listed messages where either "reactions" == empty AND "mentions" == empty $filterWhitelistedMessagesWithNoUserMentions
+  Filtering of white-listed messages where either "reactions" == empty AND "mentions" != empty $filterWhitelistedMessagesWithUserMentions
+  Filtering of white-listed messages where either "reactions" != empty AND "mentions" != empty $filterWhitelistedMessagesWithUserMentionsReactions
+  Filtering of white-listed messages where either "reactions" == empty AND "mentions" == empty $filterWhitelistedMessagesWithNoUserMentionsNorReactions
   """
 
   def filterWhitelistedMessagesWithNoUserMentions = {
@@ -223,6 +293,22 @@ class MessageFilterSpecs extends mutable.Specification with ScalaCheck {override
 
   def filterWhitelistedMessagesWithUserMentions = {
     import MessageGenerators.arbGenSievedMessagesWithUserMentions
+    prop { (msg: SievedMessages) ⇒
+      val result = MessageFilter.apply(msg)
+      result.whitelistedMessages.size must beBetween(1,2)
+    }.set(minTestsOk = 10)
+  }
+
+  def filterWhitelistedMessagesWithUserMentionsReactions = {
+    import MessageGenerators.arbGenSievedMessagesWithUserMentionsReactions
+    prop { (msg: SievedMessages) ⇒
+      val result = MessageFilter.apply(msg)
+      result.whitelistedMessages.size must beBetween(1,2)
+    }.set(minTestsOk = 10)
+  }
+
+  def filterWhitelistedMessagesWithNoUserMentionsNorReactions = {
+    import MessageGenerators.arbGenSievedMessagesWithNoUserMentionsNorReactions
     prop { (msg: SievedMessages) ⇒
       val result = MessageFilter.apply(msg)
       result.whitelistedMessages.size must beBetween(1,2)

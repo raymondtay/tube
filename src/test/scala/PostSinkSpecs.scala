@@ -42,6 +42,7 @@ import org.http4s.client.blaze._
   */
 class PostSinkSpecs extends Specification with ScalaCheck with BeforeAfterAll {override def is = sequential ^ s2"""
   Flink would push data to `PostSink` but should not xfer json data to Cerebro when empty $verifySinkWouldNotXferWhenEmpty
+  Flink would push data to `PostSink` but should xfer json data to Cerebro when non-empty $verifySinkCanPostToRemoteNoErrors
   Flink would push data to `PostSink` and should xfer json data to Cerebro (Cerebro returns expected errors)    $verifySinkCanPostToRemoteExpectedErrors
   Flink would push data to `PostSink` and should xfer json data to Cerebro (Cerebro returns un-expected errors) $verifySinkCanPostToRemoteUnexpectedErrors
   """
@@ -69,7 +70,7 @@ class PostSinkSpecs extends Specification with ScalaCheck with BeforeAfterAll {o
     (nugit.tube.configuration.ConfigValidator.loadCerebroConfig(Config.config).toOption : @unchecked) match {
       case Some(cfg) ⇒ 
         env
-          .fromCollection(PostSinkSpecData.emptyData)
+          .fromCollection(PostSinkSpecData.nonEmptyData)
           .map(new IdentityMapper[(ChannelPosts, List[String])])
           .addSink(new PostSinkInTest(teamId, cfg.seedPostsCfg, cfg.apiGatewayCfg, NO_THROW))
     }
@@ -78,7 +79,7 @@ class PostSinkSpecs extends Specification with ScalaCheck with BeforeAfterAll {o
     env.execute() must not (throwA[Throwable])
   }
 
-  def verifySinkCanPostToRemoteExpectedErrors = {
+  def verifySinkCanPostToRemoteNoErrors = {
     val env = StreamExecutionEnvironment.getExecutionEnvironment
     // configure your test environment
     env.setParallelism(1)
@@ -92,8 +93,26 @@ class PostSinkSpecs extends Specification with ScalaCheck with BeforeAfterAll {o
           .addSink(new PostSinkInTest(teamId, cfg.seedPostsCfg, cfg.apiGatewayCfg, THROW_EXPECTED))
     }
 
-    // we must see errors
+    // we must not see errors
     env.execute() must not (throwA[org.apache.flink.runtime.client.JobExecutionException])
+  }
+
+  def verifySinkCanPostToRemoteExpectedErrors = {
+    val env = StreamExecutionEnvironment.getExecutionEnvironment
+    // configure your test environment
+    env.setParallelism(1)
+    val teamId = "T12234Q"
+
+    (nugit.tube.configuration.ConfigValidator.loadCerebroConfig(Config.config).toOption : @unchecked) match {
+      case Some(cfg) ⇒ 
+        env
+          .fromCollection(PostSinkSpecData.nonEmptyData)
+          .map(new IdentityMapper[(ChannelPosts, List[String])])
+          .addSink(new PostSinkInTest(teamId, cfg.seedPostsCfg, cfg.apiGatewayCfg, THROW_EXPECTED))
+    }
+
+    // we must see errors
+    env.execute() must (throwA[org.apache.flink.runtime.client.JobExecutionException])
   }
 
   def verifySinkCanPostToRemoteUnexpectedErrors = {
@@ -110,7 +129,7 @@ class PostSinkSpecs extends Specification with ScalaCheck with BeforeAfterAll {o
           .addSink(new PostSinkInTest(teamId, cfg.seedPostsCfg, cfg.apiGatewayCfg, THROW_UNEXPECTED))
     }
 
-    // we must see errors
+    // we must not see errors
     env.execute() must not (throwA[org.apache.flink.runtime.client.JobExecutionException])
   }
 
@@ -119,7 +138,15 @@ class PostSinkSpecs extends Specification with ScalaCheck with BeforeAfterAll {o
 object PostSinkSpecData {
   implicit val typeInfo = TypeInformation.of(classOf[(ChannelPosts, List[String])])
   val emptyData : List[(ChannelPosts, List[String])]= (ChannelPosts("fake-channel-id", SievedMessages(Nil, Nil, Nil, Nil, Nil)), Nil) :: Nil
-  val nonEmptyData : List[(ChannelPosts, List[String])] =(ChannelPosts("fake-channel-id", SievedMessages(Nil, Nil, Nil, Nil, Nil)), Nil) :: Nil
+  /**
+    * See [[MessageGenerators]] for the various json data generators we are
+    * using in this test.
+    */
+  val nonEmptyData : List[(ChannelPosts, List[String])] = {
+    import MessageGenerators._
+    val jsonData = jsonWithUserMentions ++ jsonWithNoUserMentionsNorReactions 
+    (ChannelPosts("fake-channel-id", SievedMessages(Nil, Nil, Nil, Nil, jsonData)), Nil) :: Nil
+  }
 }
 
 //
