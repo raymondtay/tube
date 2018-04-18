@@ -66,12 +66,13 @@ object JsonCodecGenerators {
     subtype ← arbitrary[String].suchThat(!_.isEmpty)
     text ← arbitrary[String].suchThat(!_.isEmpty)
     file ← genUserFile
+    fileInitialComment ← arbitrary[String].suchThat(!_.isEmpty)
     fileComment1 ← genUserFileComment
     fileComment2 ← genUserFileComment
     user ← option(arbitrary[String].suchThat(!_.isEmpty))
     bot_id ← option(arbitrary[String].suchThat(!_.isEmpty))
     ts ← arbitrary[String].suchThat(!_.isEmpty)
-  } yield UserFileShareMessage(tpe, subtype, text, file, fileComment1 ::fileComment2 ::Nil, user, bot_id, ts, Nil)
+  } yield UserFileShareMessage(tpe, subtype, text, file, fileComment1 ::fileComment2 ::Nil, fileInitialComment, user, bot_id, ts, Nil)
 
   def genBotAttachment : Gen[BotAttachment] = for {
     fallback ← arbitrary[String].suchThat(!_.isEmpty)
@@ -97,6 +98,7 @@ object JsonCodecGenerators {
 
   def genBotAttachmentMessage : Gen[BotAttachmentMessage] = for {
     tpe ← arbitrary[String].suchThat(!_.isEmpty)
+    subtype ← arbitrary[String].suchThat(!_.isEmpty)
     user ← option(arbitrary[String].suchThat(!_.isEmpty))
     bot_id ← option(arbitrary[String].suchThat(!_.isEmpty))
     botAtt1 ← genBotAttachment
@@ -107,7 +109,7 @@ object JsonCodecGenerators {
     reply2 ← genReply
     text ← arbitrary[String].suchThat(!_.isEmpty)
     ts ← arbitrary[String].suchThat(!_.isEmpty)
-  } yield BotAttachmentMessage(tpe, user, bot_id, text, botAtt1::botAtt2::Nil, ts, reac1::reac2::Nil, reply1::reply2::Nil, Nil)
+  } yield BotAttachmentMessage(tpe, subtype, user, bot_id, text, botAtt1::botAtt2::Nil, ts, reac1::reac2::Nil, reply1::reply2::Nil, Nil)
 
   def genUserAttachmentMessage : Gen[UserAttachmentMessage] = for {
     tpe ← arbitrary[String].suchThat(!_.isEmpty)

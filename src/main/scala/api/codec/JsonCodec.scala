@@ -36,6 +36,7 @@ object JsonCodec {
           ("subtype" , Json.fromString(c.subtype)),
           ("text"    , Json.fromString(c.text)),
           ("file"    , c.file.asJson.asObject.fold(Json.Null)(Json.fromJsonObject(_))),
+          ("comment" , Json.fromString(c.comment)),
           ("comments", Json.arr(c.comments.map(_.asJson):_*)), 
           ("ts"      , Json.fromString(c.ts))
         ).asObject
@@ -56,6 +57,8 @@ object JsonCodec {
       var baseJsonObject : Option[JsonObject] =
         Json.obj(
           ("type"       , Json.fromString(c.`type`)),
+          ("subtype"    , Json.fromString(c.subtype)),
+          ("username"   , c.username.fold(Json.fromString(""))(uname ⇒ Json.fromString(uname))),
           ("bot_id"     , c.bot_id.fold(Json.fromString(""))(bId ⇒ Json.fromString(bId))),
           ("text"       , Json.fromString(c.text)),
           ("attachments", Json.arr(c.attachments.map(_.asJson): _*)),
@@ -63,7 +66,6 @@ object JsonCodec {
           ("reactions"  , Json.arr(c.reactions.map(_.asJson): _*)),
           ("replies"    , Json.arr(c.replies.map(_.asJson): _*))
         ).asObject
-      baseJsonObject = baseJsonObject.map(base ⇒  c.user.fold(base)(u ⇒ base.add("user", Json.fromString(u))))
       baseJsonObject =
         c.mentions match {
           case Nil ⇒ baseJsonObject
