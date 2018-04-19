@@ -58,12 +58,12 @@ object JsonCodec {
         Json.obj(
           ("type"       , Json.fromString(c.`type`)),
           ("subtype"    , Json.fromString(c.subtype)),
-          ("username"   , c.username.fold(Json.fromString(""))(uname ⇒ Json.fromString(uname))),
           ("text"       , Json.fromString(c.text)),
           ("ts"         , Json.fromString(c.ts))
         ).asObject
 
       baseJsonObject = baseJsonObject.map(base ⇒ c.bot_id.fold(base)(botId ⇒ base.add("bot_id", Json.fromString(botId))))
+      baseJsonObject = baseJsonObject.map(base ⇒ c.username.fold(base)(username⇒ base.add("username", Json.fromString(username))))
       baseJsonObject = baseJsonObject.map(base ⇒ c.attachments.fold(base)(attachments ⇒ base.add("attachments", Json.arr(attachments: _*))))
       baseJsonObject =
         c.reactions match {

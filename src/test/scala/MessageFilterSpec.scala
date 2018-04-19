@@ -78,15 +78,37 @@ object MessageGenerators {
     mentions ← listOfN(3, generateLegalSlackUserIds)
   } yield UserFileShareMessage(tpe, subtype, text, file, fileComment1 ::fileComment2 ::Nil, fileInitialComment, user, bot_id, ts, mentions)
 
-  def genBotAttachment : Gen[BotAttachment] = for {
-    fallback ← arbitrary[String].suchThat(!_.isEmpty)
-    text ← arbitrary[String].suchThat(!_.isEmpty)
-    pretext ← arbitrary[String].suchThat(!_.isEmpty)
-    id ← arbitrary[Long]
-    color ← arbitrary[String].suchThat(!_.isEmpty)
-    mrkdwn_in1 ← alphaStr.suchThat(!_.isEmpty)
-    mrkdwn_in2 ← alphaStr.suchThat(!_.isEmpty)
-  } yield BotAttachment(fallback, text, pretext, id, color, mrkdwn_in1::mrkdwn_in2::Nil)
+  val attachmentData =
+    """
+      "attachments": [
+      {
+        "fallback": "blah blah blah",
+        "text": "blah blah blah",
+        "id": 1,
+        "color": "33CC66",
+        "mrkdwn_in": [
+        "text"
+        ]
+      }
+      ]
+    """ ::
+    """
+      "attachments": [
+      {
+        "fallback": "blah blah blah",
+        "text": "blah blah blah",
+        "id": 1,
+        "color": "33CC66",
+        "mrkdwn_in": [
+        "text"
+        ]
+      }
+      ]
+    """ :: Nil map(parse(_).getOrElse(Json.Null))
+ 
+  def genBotAttachment : Gen[_root_.io.circe.Json] = for {
+   json ← oneOf(attachmentData)
+  } yield json
 
 
   def genReaction : Gen[Reaction] = for {
@@ -105,8 +127,7 @@ object MessageGenerators {
     subtype ← arbitrary[String].suchThat(!_.isEmpty)
     user ← option(arbitrary[String].suchThat(!_.isEmpty))
     bot_id ← option(arbitrary[String].suchThat(!_.isEmpty))
-    botAtt1 ← genBotAttachment
-    botAtt2 ← genBotAttachment
+    botAtt ← genBotAttachment
     reac1 ← genReaction
     reac2 ← genReaction
     reply1 ← genReply
@@ -114,7 +135,7 @@ object MessageGenerators {
     text ← arbitrary[String].suchThat(!_.isEmpty)
     ts ← arbitrary[String].suchThat(!_.isEmpty)
     mentions ← listOfN(3, generateLegalSlackUserIds)
-  } yield BotAttachmentMessage(tpe, subtype, user, bot_id, text, botAtt1::botAtt2::Nil, ts, reac1::reac2::Nil, reply1::reply2::Nil, mentions)
+  } yield BotAttachmentMessage(tpe, subtype, user, bot_id, text, Some(Vector(botAtt)), ts, reac1::reac2::Nil, reply1::reply2::Nil, mentions)
 
   def genUserAttachmentMessage : Gen[UserAttachmentMessage] = for {
     tpe ← arbitrary[String].suchThat(!_.isEmpty)
