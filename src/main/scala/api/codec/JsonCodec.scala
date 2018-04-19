@@ -59,13 +59,22 @@ object JsonCodec {
           ("type"       , Json.fromString(c.`type`)),
           ("subtype"    , Json.fromString(c.subtype)),
           ("username"   , c.username.fold(Json.fromString(""))(uname ⇒ Json.fromString(uname))),
-          ("bot_id"     , c.bot_id.fold(Json.fromString(""))(bId ⇒ Json.fromString(bId))),
           ("text"       , Json.fromString(c.text)),
-          ("attachments", Json.arr(c.attachments.map(_.asJson): _*)),
-          ("ts"         , Json.fromString(c.ts)),
-          ("reactions"  , Json.arr(c.reactions.map(_.asJson): _*)),
-          ("replies"    , Json.arr(c.replies.map(_.asJson): _*))
+          ("ts"         , Json.fromString(c.ts))
         ).asObject
+
+      baseJsonObject = baseJsonObject.map(base ⇒ c.bot_id.fold(base)(botId ⇒ base.add("bot_id", Json.fromString(botId))))
+      baseJsonObject = baseJsonObject.map(base ⇒ c.attachments.fold(base)(attachments ⇒ base.add("attachments", Json.arr(attachments: _*))))
+      baseJsonObject =
+        c.reactions match {
+          case Nil       ⇒ baseJsonObject
+          case reactions ⇒ baseJsonObject.map(base ⇒ base.add("reactions", Json.arr(reactions.map(_.asJson): _*)))
+        }
+      baseJsonObject =
+        c.replies match {
+          case Nil     ⇒ baseJsonObject
+          case replies ⇒ baseJsonObject.map(base ⇒ base.add("replies", Json.arr(replies.map(_.asJson): _*)))
+        }
       baseJsonObject =
         c.mentions match {
           case Nil ⇒ baseJsonObject
@@ -81,12 +90,24 @@ object JsonCodec {
         Json.obj(
           ("type"       , Json.fromString(c.`type`)),
           ("text"       , Json.fromString(c.text)),
-          ("attachments", Json.arr(c.attachments: _*)),
-          ("ts"         , Json.fromString(c.ts)),
-          ("reactions"  , Json.arr(c.reactions.map(_.asJson): _*)),
-          ("replies"    , Json.arr(c.replies.map(_.asJson): _*))
+          ("ts"         , Json.fromString(c.ts))
         ).asObject
       baseJsonObject = baseJsonObject.map(base ⇒  c.user.fold(base)(u ⇒ base.add("user", Json.fromString(u))))
+      baseJsonObject =
+        c.attachments match {
+          case Nil         ⇒ baseJsonObject
+          case attachments ⇒ baseJsonObject.map(base ⇒ base.add("attachments", Json.arr(attachments: _*)))
+        }
+      baseJsonObject =
+        c.reactions match {
+          case Nil       ⇒ baseJsonObject
+          case reactions ⇒ baseJsonObject.map(base ⇒ base.add("reactions", Json.arr(reactions.map(_.asJson): _*)))
+        }
+      baseJsonObject =
+        c.replies match {
+          case Nil     ⇒ baseJsonObject
+          case replies ⇒ baseJsonObject.map(base ⇒ base.add("replies", Json.arr(replies.map(_.asJson): _*)))
+        }
       baseJsonObject =
         c.mentions match {
           case Nil ⇒ baseJsonObject
