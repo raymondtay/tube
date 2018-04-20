@@ -36,11 +36,11 @@ object JsonCodec {
           ("subtype" , Json.fromString(c.subtype)),
           ("text"    , Json.fromString(c.text)),
           ("file"    , c.file.asJson.asObject.fold(Json.Null)(Json.fromJsonObject(_))),
-          ("comment" , Json.fromString(c.comment)),
           ("comments", Json.arr(c.comments.map(_.asJson):_*)), 
           ("ts"      , Json.fromString(c.ts))
         ).asObject
 
+      baseJsonObject = baseJsonObject.map(base ⇒  if (c.comment.isEmpty) base else base.add("comment", Json.fromString(c.comment)))
       baseJsonObject = baseJsonObject.map(base ⇒  c.user.fold(base.add("user", Json.Null))(u ⇒ base.add("user", Json.fromString(u))))
       baseJsonObject = baseJsonObject.map(base ⇒  c.bot_id.fold(base.add("bot_id", Json.Null))(b ⇒ base.add("bot_id", Json.fromString(b))))
       baseJsonObject =
