@@ -1,3 +1,4 @@
+import org.scoverage.coveralls.Imports.CoverallsKeys._
 import Dependencies._
 
 // Leverage Maven's repository and not look for the local
@@ -61,3 +62,5 @@ run in Compile := Defaults.runTask(fullClasspath in Compile,
 // exclude Scala library from assembly
 test in assembly := {} /* tests should have been run during CI/CD */
 assemblyOption in assembly := (assemblyOption in assembly).value.copy(includeScala = false)
+
+coverallsToken := Some("7d6HwtxY1fkvtUeLaERY8gZaAVcpxITLU")
