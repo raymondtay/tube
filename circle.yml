@@ -1,40 +1,31 @@
-# Scala CircleCI 2.0 configuration file
-#
-# Check https://circleci.com/docs/2.0/sample-config/ for more details
-# Links:
-# + Java OOM errors [https://circleci.com/blog/how-to-handle-java-oom-errors/]
-#
-machine:
-  environment:
-    SBT_VERSION: 0.13.16
-    SBT_OPTS: "-Xms3072M -Xmx3072M -Xss1M -XX:+CMSClassUnloadingEnabled"
-
-checkout:
-  pre:
-    - rm -fR ~/.sbt/1.0/staging/ # this is necessary to clear out outdated repos s.t. sbt can load fresh ones
-  post:
-    - git submodule sync --recursive
-    - git submodule update --recursive --init # use submodules
-
-dependencies:
-  # Disabling circleci in picking up cached binaries
-  # cache_directories:
-  #   - "~/.sbt"
-  pre:
-    - wget --output-document=$HOME/bin/sbt-launch.jar
-      https://repo.typesafe.com/typesafe/ivy-releases/org.scala-sbt/sbt-launch/"$SBT_VERSION"/sbt-launch.jar
-    - echo "java $SBT_OPTS -jar \`dirname \$0\`/sbt-launch.jar \"\$@\""
-      > $HOME/bin/sbt
-    - chmod u+x $HOME/bin/sbt
-    - which sbt
-    - sbt sbtVersion    
-
-test:
-  override:
-    - sbt coverageOn clean test
-    - sbt coverageReport coveralls
-  post:
-    - mkdir -p $CIRCLE_ARTIFACTS/scala-2.11
-    - mv target/scala-2.11/coverage-report  $CIRCLE_ARTIFACTS/scala-2.11/coverage-report
-    - mv target/scala-2.11/scoverage-report $CIRCLE_ARTIFACTS/scala-2.11/scoverage-report
-
+version: 2
+jobs:
+  build:
+    working_directory: ~/nugit/tube
+    parallelism: 1
+    shell: /bin/bash --login
+    environment:
+      CIRCLE_ARTIFACTS: /tmp/circleci-artifacts
+      CIRCLE_TEST_REPORTS: /tmp/circleci-test-results
+      SBT_VERSION: 0.13.17
+      SBT_OPTS: -Xms3072M -Xmx3072M -Xss1M -XX:+CMSClassUnloadingEnabled
+      COVERALLS_REPO_TOKEN: epxO4zHVNvU9gbIfnfgXsqYRNuyWhw5GZ
+    docker:
+    - image: circleci/openjdk:8-jdk-node
+    steps:
+    - checkout
+    - run: git submodule sync --recursive
+    - run: git submodule update --recursive --init
+    - run: mkdir -p $CIRCLE_ARTIFACTS $CIRCLE_TEST_REPORTS
+    - run: /opt/sbt/bin/sbt coverageOn clean test
+    - run: /opt/sbt/bin/sbt coverageReport coveralls
+    - run: mkdir -p $CIRCLE_ARTIFACTS/scala-2.11
+    - run: mv target/scala-2.11/coverage-report  $CIRCLE_ARTIFACTS/scala-2.11/coverage-report
+    - run: mv target/scala-2.11/scoverage-report $CIRCLE_ARTIFACTS/scala-2.11/scoverage-report
+    - store_test_results:
+        path: /tmp/circleci-test-results
+    # Save artifacts
+    - store_artifacts:
+        path: /tmp/circleci-artifacts
+    - store_artifacts:
+        path: /tmp/circleci-test-results
