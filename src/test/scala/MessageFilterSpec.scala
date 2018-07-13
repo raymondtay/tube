@@ -35,11 +35,6 @@ object MessageGenerators {
     suffix ← alphaNumStr.suchThat(!_.isEmpty)
   } yield s"<@U${suffix}>"
 
-  def generateThumbs360 = oneOf("http://bogus.com/a.png", "","http://anotherbogus.com/444.jpg")
-  def generateThumbsPdf = oneOf("http://bogus.com/a.pdf", "","http://anotherbogus.com/444.pdf")
-  def generateThumbsVid = oneOf("http://bogus.com/a.mp4", "","http://anotherbogus.com/444.mp4")
-
- 
   def genUserFile : Gen[UserFile] = for {
     filetype ← arbitrary[String].suchThat(!_.isEmpty)
     id ← arbitrary[String].suchThat(!_.isEmpty)
@@ -52,11 +47,7 @@ object MessageGenerators {
     mimetype ← arbitrary[String].suchThat(!_.isEmpty)
     permalink ← arbitrary[String].suchThat(!_.isEmpty)
     created ← arbitrary[Long]
-    mode ← arbitrary[String].suchThat(!_.isEmpty)
-    thumb360 ← option(generateThumbs360)
-    thumbPdf ← option(generateThumbsPdf)
-    thumbVid ← option(generateThumbsVid)
-  } yield UserFile(filetype, id, title, url_private, external_type, timestamp, pretty_type, name, mimetype, permalink, created, mode, thumb360, thumbPdf, thumbVid)
+  } yield UserFile(filetype, id, title, url_private, external_type, timestamp, pretty_type, name, mimetype, permalink, created, "", Some("http://a.com/a.png"), Some("http://a.com/a.pdf"), Some("http://a.com/a.mp4"))
 
   def genUserFileComment : Gen[UserFileComment] = for {
     id ← arbitrary[String].suchThat(!_.isEmpty)
