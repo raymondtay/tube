@@ -124,3 +124,6 @@ The official `.gitignore` file in this project contains the following from
 The official `.gitignore` file in this project contains the following from 
 [here](https://github.com/github/gitignore/blob/master/Global/Eclipse.gitignore)
 
+
+Copyright(c) 2018 - 2020
+All rights reserved.
