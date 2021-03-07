@@ -19,6 +19,10 @@ The architecture diagrams is:
 ![Tube Architecture](./images/tube-component-diagram.png)
 ![Tube Architecture GCP](./images/tube-gcp-apgw-diagram.png)
 
+In my setup, Apache Flink pipeling processing logic works with the [slacks](https://github.com/raymondtay/slacks) library i created
+to extract, unmangle, sanitize the incoming data and _sinks_ that
+post-processed data into _Cerebro_. The `Cerebro` is essentially a _**Graph Engine**_ that takes the data and deposits into its data structures for later retrieval rendering.
+
 ![Cats Friendly Badge](https://typelevel.org/cats/img/cats-badge-tiny.png)
 
 # QuickStart
@@ -29,7 +33,9 @@ This package is deployed against [Apache Flink](http://flink.apache.org) and is 
 README assumes that you have a Apache Flink standalone cluster (i.e. 1 master
 node with _n_ slave nodes.)
 
-- Verify that Flink is running (Flink's Web UI is hosted on `http://10.142.0.2:8081`)
+## Verify the installation
+
+- Verify that Flink is running (Flink's Web UI is hosted on `http://<ip>:8081`)
 - Run `sbt coverageOff assembly` (this should give you a _fat_ jar file e.g.  `tube-assembly-0.1-SNAPSHOT.jar`)
 -- In CI/CD environments, this would be automated.
 - Take that _fat_ jar file and run it against the Flink e.g. `bin/flink run tube-assembly-0.1-SNAPSHOT.jar`
@@ -38,6 +44,7 @@ node with _n_ slave nodes.)
   `xoxp-`, `xoxa-` or `xoxb-` (*Note:* `Tube` does not support slack's legacy
   tokens; and you might need to quote the slack token to prevent the
   commandline to parse it.)
+
 ## Seed Users
 
 `tube` uses `slacks` to extract the total number of users from slack via its
@@ -142,5 +149,5 @@ The official `.gitignore` file in this project contains the following from
 [here](https://github.com/github/gitignore/blob/master/Global/Eclipse.gitignore)
 
 
-Copyright(c) 2018 - 2020
-All rights reserved.
+Copyright(c) 2018 - 2020 Raymond Tay (raymondtay1974@gmail.com)
+All rights reserved
