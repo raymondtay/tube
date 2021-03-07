@@ -1,8 +1,25 @@
-# tube
+# Tube
+
+The business problem to solve was to gather insights into user behaviors by
+studying how users behave on Slack. The essential data problem here was to
+create a pipelining technology that was able to ingest unbounded datasets and
+apply _transformation_ to it.
+
+When it comes to creating data pipelines that can handle unbounded datasets and
+provide solutions to handle _out of order_ , late-arriving data; the goto tool
+is Apache Beam or Apache Flink. I chose [Apache Flink](https://flink.apache.org) for this design
+for the reasons that it was a green field project and it was a _test and learn_
+approach. Apache Flink, at that time, had a good reputation of being an
+industrial-strength solution that allows a processing topology to be defined in
+their easy to follow SDKs.
+
+# Tube Architecture
+
+The architecture diagrams is:
+![Tube Architecture](./images/tube-component-diagram.png)
+![Tube Architecture GCP](./images/tube-gcp-apgw-diagram.png)
 
 ![Cats Friendly Badge](https://typelevel.org/cats/img/cats-badge-tiny.png)
-
-The pipeline for Slack
 
 # QuickStart
 
